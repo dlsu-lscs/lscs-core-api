@@ -2,6 +2,8 @@
 
 ## Route Endpoints
 
+Everything will be redirected to `/` after successful login
+
 `/login/google`
 - endpoint for logging in to google
 

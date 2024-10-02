@@ -104,7 +104,7 @@ router.post("/logout", function (req, res, next) {
     });
 });
 
-// renders page
+// renders page (web)
 router.get("/login", function (req, res, next) {
     res.render("login");
     // passport.authenticate("google");
