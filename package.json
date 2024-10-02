@@ -28,5 +28,8 @@
         "passport-google-oidc": "^0.1.0",
         "pluralize": "^8.0.0",
         "sqlite3": "^5.0.2"
+    },
+    "devDependencies": {
+        "nodemon": "^3.1.7"
     }
 }

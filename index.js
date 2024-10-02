@@ -10,7 +10,7 @@ const session = require("express-session");
 const passport = require("passport");
 
 const SQLiteStore = require("connect-sqlite3")(session);
-const indexRouter = require("./routes/index");
+const webRouter = require("./routes/web_route");
 const authRouter = require("./routes/auth");
 
 const app = express();
@@ -45,7 +45,7 @@ app.use(
 );
 app.use(passport.authenticate("session"));
 
-app.use("/", indexRouter);
+app.use("/web", webRouter);
 app.use("/", authRouter);
 
 // catch 404 and forward to error handler

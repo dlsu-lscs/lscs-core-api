@@ -8,7 +8,7 @@ const router = express.Router();
 /* NOTES:
  
 profile: {
-    id: '112707107197899390856',
+    id: '<unique>',
     displayName: 'Edwin Sadiarin Jr.',
     name: { 
         familyName: 'Sadiarin Jr.',
@@ -35,7 +35,7 @@ passport.use(
             console.log("User's display name:", profile.displayName);
             console.log("User's email:", profile.emails ? profile.emails[0].value : "No email provided");
 
-            // store the user in the database
+            // store the user in the database after successful login
             db.get(
                 "SELECT * FROM federated_credentials WHERE provider = ? AND subject = ?",
                 [issuer, profile.id],
