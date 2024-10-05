@@ -1,23 +1,6 @@
 # LSCS Central Auth API
 
-
-we will manually add the LSCS Members as `users` to the database
-- manualSaveUser()
-- role will be "manually filled out"
-- avatar_url will only be "automatically filled out" when they login to google
-
-MAY SHEETS TAYO
-- convert to SQL nalang gagawin
-- no more registration
-
-## TODOs
-
-- [ ] add auto redirect to `/web` when testing with frontend 
-- [ ] frontend: how receive jwt token when hit `/login`
-
 ## Route Endpoints
-
-### Auth (MAIN)
 
 Everything will be redirected to `/` after successful login
 
@@ -66,5 +49,3 @@ add endpoints for validating users:
 
 
 # Database Schema
-
-
