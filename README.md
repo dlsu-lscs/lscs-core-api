@@ -9,6 +9,7 @@
     - [ ] docs: frontend to verify JWT
 - [ ] build: dockerize for dev and prod builds
 - [ ] chore: update to es6
+- [ ] rewrite/port to Go
 
 ## Route Endpoints
 
@@ -25,6 +26,7 @@ Everything will be redirected to `/` after successful login
 `/invalidate`
 - for logging out
 
+<<<<<<< HEAD
 `/refresh`
 - for refresh tokens request
 
@@ -59,3 +61,8 @@ add endpoints for validating users:
 
 
 # Database Schema
+=======
+### For testing
+
+`/users`
+>>>>>>> 0e201e3 (refactor: to es6 IN PROGRESS checkpoint)
