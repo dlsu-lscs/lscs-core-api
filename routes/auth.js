@@ -115,7 +115,8 @@ router.get("/login/google", passport.authenticate("google"));
 router.get(
     "/oauth2/redirect/google",
     passport.authenticate("google", {
-        successRedirect: "/",
+        // successRedirect: "/",
+        successRedirect: "/web", // for testing with web frontend
         failureRedirect: "/login",
     }),
 );
