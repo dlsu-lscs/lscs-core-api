@@ -17,6 +17,18 @@ Everything will be redirected to `/` after successful login
 - for logging out
 
 
-### Web (FOR TESTING with frontend)
+## JWT
 
-`/web` -> homepage
+flow:
+- client req to `/login` endpoint
+-  `/login` endpoint -> redirects to google oauth2 login page
+-  google
+- hit backend
+- generate JWT with Claims
+-  response with HttpOnly Cookie
+-  for every request, decode JWT using JWT asm/sym secret
+
+needs:
+- signing key
+- signing key
+- algo
