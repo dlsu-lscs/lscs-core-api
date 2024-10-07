@@ -1,0 +1,160 @@
+package main
+
+import (
+	"database/sql"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
+	"time"
+
+	"github.com/dgrijalva/jwt-go"
+	"github.com/goth/goth"
+	"github.com/goth/goth/gothic"
+	"github.com/goth/goth/providers/google"
+	"github.com/joho/godotenv"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
+	_ "github.com/lib/pq"
+)
+
+var (
+	jwtSecret []byte
+	db        *sql.DB
+)
+
+// JWT claims structure
+type JwtCustomClaims struct {
+	Email string `json:"email"`
+	jwt.StandardClaims
+}
+
+// User structure to hold Google user data
+type User struct {
+	GoogleID  string
+	Email     string
+	Name      string
+	AvatarURL string
+}
+
+func main() {
+	// Load environment variables
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
+	// Set JWT secret
+	jwtSecret = []byte(os.Getenv("JWT_SECRET"))
+
+	// Connect to Postgres
+	var err error
+	db, err = sql.Open("postgres", fmt.Sprintf("user=%s password=%s dbname=%s host=%s port=%s sslmode=disable",
+		os.Getenv("POSTGRES_USER"),
+		os.Getenv("POSTGRES_PASSWORD"),
+		os.Getenv("POSTGRES_DB"),
+		os.Getenv("POSTGRES_HOST"),
+		os.Getenv("POSTGRES_PORT"),
+	))
+	if err != nil {
+		log.Fatal("Failed to connect to the database:", err)
+	}
+	defer db.Close()
+
+	// Initialize Goth provider
+	goth.UseProviders(
+		google.New(os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET"), "http://localhost:8080/auth/google/callback", "email", "profile"),
+	)
+
+	// Create a new Echo instance
+	e := echo.New()
+
+	// Middleware
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+
+	// Routes
+	e.GET("/auth/google", beginGoogleAuth)             // Google login route
+	e.GET("/auth/google/callback", googleAuthCallback) // Google callback route
+	e.POST("/logout", logout)                          // Logout route
+
+	// Protected route
+	e.GET("/profile", profile, middleware.JWTWithConfig(middleware.JWTConfig{
+		SigningKey: jwtSecret,
+	}))
+
+	// Start the server
+	e.Logger.Fatal(e.Start(":8080"))
+}
+
+// Step 1: Redirect to Google OAuth login
+func beginGoogleAuth(c echo.Context) error {
+	gothic.BeginAuthHandler(c.Response(), c.Request())
+	return nil
+}
+
+// Step 2: Handle the callback and store user information
+func googleAuthCallback(c echo.Context) error {
+	user, err := gothic.CompleteUserAuth(c.Response(), c.Request())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, "Error completing Google authentication")
+	}
+
+	// Save user information in the database
+	saveUser(&user)
+
+	// Generate JWT token
+	claims := &JwtCustomClaims{
+		Email: user.Email,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: time.Now().Add(time.Hour * 72).Unix(), // Token expiration time
+		},
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := token.SignedString(jwtSecret)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, "Error generating JWT token")
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"token": tokenString,
+		"user":  user,
+	})
+}
+
+// Save user information to PostgreSQL
+func saveUser(user *goth.User) {
+	query := `
+        INSERT INTO users (google_id, email, name, avatar_url)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (google_id) DO NOTHING;
+    `
+	_, err := db.Exec(query, user.UserID, user.Email, user.Name, user.AvatarURL)
+	if err != nil {
+		log.Printf("Error saving user to the database: %v", err)
+	}
+}
+
+// Protected route: Get user profile (using JWT)
+func profile(c echo.Context) error {
+	user := c.Get("user").(*jwt.Token)
+	claims := user.Claims.(*JwtCustomClaims)
+
+	// Query user from the database
+	query := `SELECT email, name, avatar_url FROM users WHERE email = $1`
+	var email, name, avatarURL string
+	err := db.QueryRow(query, claims.Email).Scan(&email, &name, &avatarURL)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, "Error fetching user profile")
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"email":     email,
+		"name":      name,
+		"avatarURL": avatarURL,
+	})
+}
+
+// Logout endpoint (client-side token invalidation)
+func logout(c echo.Context) error {
+	return c.JSON(http.StatusOK, echo.Map{"message": "Logged out successfully"})
+}
