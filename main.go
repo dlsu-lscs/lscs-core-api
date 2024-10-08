@@ -6,12 +6,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 
 	"github.com/golang-jwt/jwt/v5"
-	// echojwt "github.com/labstack/echo-jwt/v4"
+	echojwt "github.com/labstack/echo-jwt/v4"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -19,16 +20,6 @@ import (
 	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/google"
 )
-
-// profile: {
-//     id: '<unique>',
-//     displayName: 'Edwin Sadiarin Jr.',
-//     name: {
-//         familyName: 'Sadiarin Jr.',
-//         givenName: 'Edwin'
-//     },
-//     emails: [ { value: 'edwin_sadiarinjr@dlsu.edu.ph' } ]
-// }
 
 // TODO: DO I NEED THIS WTFOK?!?!?!???????
 type Profile struct {
@@ -91,16 +82,24 @@ func main() {
 		log.Fatal("Error loading .env file.")
 	}
 
-	// jwtSecret := []byte(os.Getenv("JWT_SECRET"))
-
-	dbpool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	dbpool, err = pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Unable to create database connection pool: %v", err)
 		os.Exit(1)
 	}
 	defer dbpool.Close()
 
-	goth.UseProviders(google.New(os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET"), "http://localhost:2323/auth/google/callback", "email", "profile"))
+	err = createUsersTable()
+	if err != nil {
+		log.Fatalf("Error creating users table: %v", err)
+	}
+
+	goth.UseProviders(google.New(
+		os.Getenv("GOOGLE_CLIENT_ID"),
+		os.Getenv("GOOGLE_CLIENT_SECRET"),
+		"http://localhost:2323/auth/google/callback", // TODO: add prod callback in google console
+		"email", "profile", // scopes - can add openIDConnect if necessary
+	))
 
 	// Echo instance
 	e := echo.New()
@@ -108,16 +107,16 @@ func main() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	// e.Use(echojwt.WithConfig(echojwt.Config{
-	// 	SigningKey: []byte(os.Getenv("JWT_SECRET")),
-	// }))
+	e.Use(echojwt.WithConfig(echojwt.Config{
+		SigningKey: []byte(os.Getenv("JWT_SECRET")),
+	}))
 
 	// Routes
 	e.GET("/", hello)
 	e.GET("/login", loginHandler)
 	e.GET("/auth/google/callback", googleAuthCallback)
 	e.POST("/logout", logoutHandler)
-	e.GET("/refresh-token", refreshTokenHandler)
+	// e.GET("/refresh-token", refreshTokenHandler)
 	e.GET("/profile", profileHandler)
 
 	// Start server
@@ -129,9 +128,22 @@ func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
 }
 
-// func jwtTestHandler(c echo.Context) error {
-// 	token, err := c.Get("user").(*jwt.Token)
-// }
+func createUsersTable() error {
+	query := `
+        CREATE TABLE IF NOT EXISTS users (
+            google_id VARCHAR(255) PRIMARY KEY,
+            email VARCHAR(255) NOT NULL,
+            name VARCHAR(255),
+            avatar_url VARCHAR(255)
+        );
+    `
+	_, err := dbpool.Exec(context.Background(), query)
+	if err != nil {
+		log.Printf("Failed to create users table")
+		return fmt.Errorf("Failed to create users table: %w", err)
+	}
+	return nil
+}
 
 // GET: `/login` - redirects to Google OAuth
 func loginHandler(c echo.Context) error {
@@ -141,7 +153,7 @@ func loginHandler(c echo.Context) error {
 
 // GET: `/auth/google/callback` - handle callback, assume user authenticated
 func googleAuthCallback(c echo.Context) error {
-    // TODO: googleAuthCallback: add JWT generation
+	// TODO: googleAuthCallback: add JWT generation
 	user, err := gothic.CompleteUserAuth(c.Response(), c.Request())
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, "Error completing Google authentication")
@@ -153,14 +165,31 @@ func googleAuthCallback(c echo.Context) error {
 
 	// generate JWT with custom claims
 
-	// send the JWT signed string (with symmetric key/secret) to client
+	claims := JwtCustomClaims{
+		Email: user.Email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)), // TODO: is this proper expiration time for the JWT
+		},
+	}
 
-	return nil
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenSignedString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
+	if err != nil {
+		log.Printf("Failed to generate JWT: %v", err)
+		return c.JSON(http.StatusInternalServerError, "Error generating JWT")
+	}
+
+	// send the JWT signed string (with symmetric key/secret) to client
+	// -> return user profile info with JWT token in an HttpOnly cookie
+	return c.JSON(http.StatusOK, echo.Map{
+		"token": tokenSignedString,
+		"user":  user,
+	})
 }
 
 // POST: `/logout` - invalidate session, client-side token invalidation
 func logoutHandler(c echo.Context) error {
-    // TODO: logoutHandler: check if this is redundant
+	// TODO: logoutHandler: check if this is redundant
 	err := gothic.Logout(c.Response(), c.Request())
 	if err != nil {
 		return err
@@ -169,9 +198,9 @@ func logoutHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"message": "Logged out successfully"})
 }
 
-func refreshTokenHandler(c echo.Context) error {
-	return nil
-}
+// func refreshTokenHandler(c echo.Context) error {
+// 	return nil
+// }
 
 func saveUser(user *goth.User) error {
 	query := `
@@ -190,20 +219,24 @@ func saveUser(user *goth.User) error {
 
 // protected route for testing JWT - returns user profile
 func profileHandler(c echo.Context) error {
-    // TODO: profileHandler: profile tasks
+	// TODO: profileHandler: profile tasks
 	// - [ ] get user token
-    userToken := c.Get("")
+	userToken := c.Get("user").(*jwt.Token)
+	claims := userToken.Claims.(*JwtCustomClaims)
 	// - [ ] get claims -> retrieve the email
 	// - [ ] query SELECT the user profile info
 	// - [ ] return JSON
-    query := `SELECT google_id, email, name, avatar_url FROM users WHERE email = $1 `
-    dbpool.Exec(context.Background(), query, claim)
+	var google_id, email, name, avatar_url string
+	query := `SELECT google_id, email, name, avatar_url FROM users WHERE email = $1 `
+	err := dbpool.QueryRow(context.Background(), query, claims.Email).Scan(&google_id, &email, &name, &avatar_url)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, "Error retrieving info from database.")
+	}
 
-    
 	return c.JSON(http.StatusOK, echo.Map{
-        "googleID": ,
-        "email": ,
-        "name": ,
-        "avatarURL": ,
-    })
+		"googleID":  google_id,
+		"email":     email,
+		"name":      name,
+		"avatarURL": avatar_url,
+	})
 }
