@@ -11,13 +11,42 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/google"
 )
 
+// profile: {
+//     id: '<unique>',
+//     displayName: 'Edwin Sadiarin Jr.',
+//     name: {
+//         familyName: 'Sadiarin Jr.',
+//         givenName: 'Edwin'
+//     },
+//     emails: [ { value: 'edwin_sadiarinjr@dlsu.edu.ph' } ]
+// }
+
+type Profile struct {
+	ID          string `json:"id"`
+	DisplayName string `json:"displayName"`
+	Name        Name
+	Emails      []Email
+}
+
+type Name struct {
+	FamilyName string `json:"familyName"`
+	GivenName  string `json:"givenName"`
+}
+
+type Email struct {
+	Value string `json:"value"`
+}
+
+// example simple struct for User (schema)
 type User struct {
-	GoogleID string
-	Email    string
-	Name     string
+	GoogleID  string
+	Email     string
+	Name      string
+	AvatarURL string
 }
 
 func main() {
@@ -42,7 +71,7 @@ func main() {
 	e.GET("/", hello)
 	e.GET("/login", loginHandler)
 	e.GET("/auth/google/callback", googleAuthCallback)
-	e.GET("/logout", logoutHandler)
+	e.POST("/logout", logoutHandler)
 	e.GET("/refresh-token", refreshTokenHandler)
 
 	// Start server
@@ -58,23 +87,35 @@ func hello(c echo.Context) error {
 // 	token, err := c.Get("user").(*jwt.Token)
 // }
 
+// GET: `/login` - redirects to Google OAuth
 func loginHandler(c echo.Context) error {
-	// call googleAuthCallback
-	// if successful login:
-	// - store user to db
-	// - generate JWT with custom claims
-	// - send the JWT signed string (with symmetric key/secret) to client
+	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
 }
 
-func logoutHandler(c echo.Context) error {
+// GET: `/auth/google/callback` - handle callback, assume user authenticated
+func googleAuthCallback(c echo.Context) error {
+	user, err := gothic.CompleteUserAuth(c.Response(), c.Request())
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, "Error completing Google authentication")
+	}
+	// store user to db
+	// generate JWT with custom claims
+	// send the JWT signed string (with symmetric key/secret) to client
 	return nil
+}
+
+// POST: `/logout` - invalidate session, client-side token invalidation
+func logoutHandler(c echo.Context) error {
+	// TODO: check if this is redundant
+	err := gothic.Logout(c.Response(), c.Request())
+	if err != nil {
+		return err
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{"message": "Logged out successfully"})
 }
 
 func refreshTokenHandler(c echo.Context) error {
-	return nil
-}
-
-func googleAuthCallback(c echo.Context) error {
 	return nil
 }
