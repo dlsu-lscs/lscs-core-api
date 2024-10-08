@@ -141,6 +141,7 @@ func loginHandler(c echo.Context) error {
 
 // GET: `/auth/google/callback` - handle callback, assume user authenticated
 func googleAuthCallback(c echo.Context) error {
+    // TODO: googleAuthCallback: add JWT generation
 	user, err := gothic.CompleteUserAuth(c.Response(), c.Request())
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, "Error completing Google authentication")
@@ -159,7 +160,7 @@ func googleAuthCallback(c echo.Context) error {
 
 // POST: `/logout` - invalidate session, client-side token invalidation
 func logoutHandler(c echo.Context) error {
-	// TODO: check if this is redundant
+    // TODO: logoutHandler: check if this is redundant
 	err := gothic.Logout(c.Response(), c.Request())
 	if err != nil {
 		return err
@@ -189,14 +190,18 @@ func saveUser(user *goth.User) error {
 
 // protected route for testing JWT - returns user profile
 func profileHandler(c echo.Context) error {
-    // TODO: profile tasks
+    // TODO: profileHandler: profile tasks
 	// - [ ] get user token
+    userToken := c.Get("")
 	// - [ ] get claims -> retrieve the email
 	// - [ ] query SELECT the user profile info
 	// - [ ] return JSON
+    query := `SELECT google_id, email, name, avatar_url FROM users WHERE email = $1 `
+    dbpool.Exec(context.Background(), query, claim)
+
     
 	return c.JSON(http.StatusOK, echo.Map{
-        "userID": ,
+        "googleID": ,
         "email": ,
         "name": ,
         "avatarURL": ,
