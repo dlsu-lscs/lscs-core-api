@@ -40,16 +40,16 @@ func main() {
 
 	// Routes
 	e.GET("/", hello)
-	// e.GET("/login", loginHandler)
-	// e.GET("/auth/google/callback", googleAuthCallback)
-	// e.GET("/logout", logoutHandler)
-	// e.GET("/refresh-token", refreshTokenHandler)
+	e.GET("/login", loginHandler)
+	e.GET("/auth/google/callback", googleAuthCallback)
+	e.GET("/logout", logoutHandler)
+	e.GET("/refresh-token", refreshTokenHandler)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":2323"))
 }
 
-// Handler
+// **** Handlers ****//
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
 }
@@ -64,5 +64,17 @@ func loginHandler(c echo.Context) error {
 	// - store user to db
 	// - generate JWT with custom claims
 	// - send the JWT signed string (with symmetric key/secret) to client
+	return nil
+}
+
+func logoutHandler(c echo.Context) error {
+	return nil
+}
+
+func refreshTokenHandler(c echo.Context) error {
+	return nil
+}
+
+func googleAuthCallback(c echo.Context) error {
 	return nil
 }
