@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 
-	// "github.com/golang-jwt/jwt/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+
+	"github.com/golang-jwt/jwt/v5"
 	// echojwt "github.com/labstack/echo-jwt/v4"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/markbates/goth"
@@ -25,6 +30,7 @@ import (
 //     emails: [ { value: 'edwin_sadiarinjr@dlsu.edu.ph' } ]
 // }
 
+// TODO: DO I NEED THIS WTFOK?!?!?!???????
 type Profile struct {
 	ID          string `json:"id"`
 	DisplayName string `json:"displayName"`
@@ -49,11 +55,50 @@ type User struct {
 	AvatarURL string
 }
 
+// this is returned by goth.User struct:
+
+// type UserFromGoth struct {
+// 	RawData           map[string]interface{}
+// 	Provider          string
+// 	Email             string
+// 	Name              string
+// 	FirstName         string
+// 	LastName          string
+// 	NickName          string
+// 	Description       string
+// 	UserID            string
+// 	AvatarURL         string
+// 	Location          string
+// 	AccessToken       string
+// 	AccessTokenSecret string
+// 	RefreshToken      string
+// 	ExpiresAt         time.Time
+// 	IDToken           string
+// }
+
+// NOTE: can add API tokens / custom keys here
+type JwtCustomClaims struct {
+	Email string `json:"email"`
+	// default claims like iss, sub, aud, expiresAt, jwtID, etc.
+	jwt.RegisteredClaims
+}
+
+var dbpool *pgxpool.Pool
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file.")
 	}
+
+	// jwtSecret := []byte(os.Getenv("JWT_SECRET"))
+
+	dbpool, err := pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Unable to create database connection pool: %v", err)
+		os.Exit(1)
+	}
+	defer dbpool.Close()
 
 	goth.UseProviders(google.New(os.Getenv("GOOGLE_CLIENT_ID"), os.Getenv("GOOGLE_CLIENT_SECRET"), "http://localhost:2323/auth/google/callback", "email", "profile"))
 
@@ -73,6 +118,7 @@ func main() {
 	e.GET("/auth/google/callback", googleAuthCallback)
 	e.POST("/logout", logoutHandler)
 	e.GET("/refresh-token", refreshTokenHandler)
+	e.GET("/profile", profileHandler)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":2323"))
@@ -99,9 +145,15 @@ func googleAuthCallback(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, "Error completing Google authentication")
 	}
+	fmt.Printf("User: %v", user)
 	// store user to db
+	// - saveUser(&user)
+	// --> should save to postgresql
+
 	// generate JWT with custom claims
+
 	// send the JWT signed string (with symmetric key/secret) to client
+
 	return nil
 }
 
@@ -118,4 +170,35 @@ func logoutHandler(c echo.Context) error {
 
 func refreshTokenHandler(c echo.Context) error {
 	return nil
+}
+
+func saveUser(user *goth.User) error {
+	query := `
+        INSERT INTO users (google_id, email, name, avatar_url)
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (google_id) DO NOTHING;
+    `
+	_, err := dbpool.Exec(context.Background(), query, user.UserID, user.Email, user.Name, user.AvatarURL)
+	if err != nil {
+		log.Printf("Error saving user to database: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+// protected route for testing JWT - returns user profile
+func profileHandler(c echo.Context) error {
+    // TODO: profile tasks
+	// - [ ] get user token
+	// - [ ] get claims -> retrieve the email
+	// - [ ] query SELECT the user profile info
+	// - [ ] return JSON
+    
+	return c.JSON(http.StatusOK, echo.Map{
+        "userID": ,
+        "email": ,
+        "name": ,
+        "avatarURL": ,
+    })
 }
