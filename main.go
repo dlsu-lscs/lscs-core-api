@@ -107,17 +107,19 @@ func main() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(echojwt.WithConfig(echojwt.Config{
-		SigningKey: []byte(os.Getenv("JWT_SECRET")),
-	}))
 
 	// Routes
 	e.GET("/", hello)
-	e.GET("/login", loginHandler)
+	e.GET("/login", loginHandler) // NOTE: use `/login?provider=google` when calling
 	e.GET("/auth/google/callback", googleAuthCallback)
 	e.POST("/logout", logoutHandler)
 	// e.GET("/refresh-token", refreshTokenHandler)
-	e.GET("/profile", profileHandler)
+
+	needsJWT := e.Group("/auth")
+	needsJWT.Use(echojwt.WithConfig(echojwt.Config{
+		SigningKey: []byte(os.Getenv("JWT_SECRET")),
+	}))
+	needsJWT.GET("/profile", profileHandler)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":2323"))
@@ -145,7 +147,7 @@ func createUsersTable() error {
 	return nil
 }
 
-// GET: `/login` - redirects to Google OAuth
+// GET: `/login?provider=google` - redirects to Google OAuth
 func loginHandler(c echo.Context) error {
 	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
@@ -158,13 +160,15 @@ func googleAuthCallback(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, "Error completing Google authentication")
 	}
-	fmt.Printf("User: %v", user)
-	// store user to db
-	// - saveUser(&user)
-	// --> should save to postgresql
+	fmt.Printf("\nUser: %v\n", user)
+	// store user to db --> should save to postgresql
+	err = saveUser(&user)
+	if err != nil {
+		log.Printf("Error saving user to database: %v", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error when saving user to database"})
+	}
 
-	// generate JWT with custom claims
-
+	// generate JWT with custom claims and sign it (symmetric key)
 	claims := JwtCustomClaims{
 		Email: user.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -178,6 +182,7 @@ func googleAuthCallback(c echo.Context) error {
 		log.Printf("Failed to generate JWT: %v", err)
 		return c.JSON(http.StatusInternalServerError, "Error generating JWT")
 	}
+	fmt.Printf("\nGenerated JWT Token: %s\n", tokenSignedString)
 
 	// send the JWT signed string (with symmetric key/secret) to client
 	// -> return user profile info with JWT token in an HttpOnly cookie
@@ -226,11 +231,12 @@ func profileHandler(c echo.Context) error {
 	// - [ ] get claims -> retrieve the email
 	// - [ ] query SELECT the user profile info
 	// - [ ] return JSON
+	fmt.Printf("Received JWT Claims: %v\n", claims)
 	var google_id, email, name, avatar_url string
 	query := `SELECT google_id, email, name, avatar_url FROM users WHERE email = $1 `
 	err := dbpool.QueryRow(context.Background(), query, claims.Email).Scan(&google_id, &email, &name, &avatar_url)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, "Error retrieving info from database.")
+		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error retrieving info from database."})
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
