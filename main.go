@@ -23,7 +23,7 @@ import (
 
 // example simple struct for User (schema)
 type User struct {
-    Email     string `json:"email"`
+	Email     string `json:"email"`
 	Name      string `json:"name"`
 	AvatarURL string `json:"avatar_url"`
 	Role      string `json:"role"`
@@ -112,7 +112,7 @@ func main() {
 	needsJWT.GET("/profile", profileHandler) // NOTE: protected /auth/profile route for testing
 
 	e.GET("/allUsers")
-	e.POST("/manualAdd", )
+	e.POST("/manualAdd", manualAddHandler)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":2323"))
@@ -247,11 +247,10 @@ func manualSaveUser() error {
 	return nil
 }
 
-
-func manualAddHandler(c echo.Context) error {
-    user, err := c.
-    return nil
-}
+// func manualAddHandler(c echo.Context) error {
+//     user, err := c.
+//     return nil
+// }
 
 // protected route for testing JWT - returns user profile
 func profileHandler(c echo.Context) error {
