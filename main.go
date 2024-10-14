@@ -111,8 +111,8 @@ func main() {
 	}))
 	needsJWT.GET("/profile", profileHandler) // NOTE: protected /auth/profile route for testing
 
+	// TODO: callback after successful auth
 	e.GET("/allUsers")
-	e.POST("/manualAdd", manualAddHandler)
 
 	// Start server
 	e.Logger.Fatal(e.Start(":2323"))
@@ -230,37 +230,15 @@ func autoSaveUser(user *goth.User) error {
 	return nil
 }
 
-// NOTE: to be used for manually inserting tables
-func manualSaveUser() error {
-	query := `
-        INSERT INTO users (email, name, avatar_url, role)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (email) DO NOTHING;
-    `
-
-	_, err := dbpool.Exec(context.Background(), query)
-	if err != nil {
-		log.Printf("Error manually saving user to database: %v", err)
-		return err
-	}
-
-	return nil
-}
-
-// func manualAddHandler(c echo.Context) error {
-//     user, err := c.
-//     return nil
-// }
-
 // protected route for testing JWT - returns user profile
 func profileHandler(c echo.Context) error {
 	// TODO: profileHandler: profile tasks
-	// - [ ] get user token
+	// - [x] get user token
 	userToken := c.Get("user").(*jwt.Token)
 	claims := userToken.Claims.(*JwtCustomClaims)
-	// - [ ] get claims -> retrieve the email
-	// - [ ] query SELECT the user profile info
-	// - [ ] return JSON
+	// - [x] get claims -> retrieve the email
+	// - [x] query SELECT the user profile info
+	// - [x] return JSON
 	fmt.Printf("Received JWT Claims: %v\n", claims)
 
 	var email, name, avatar_url, role string
