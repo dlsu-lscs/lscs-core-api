@@ -32,6 +32,9 @@ Everything will be redirected to `/` after successful login
 `/logout`
 - for logging out
 
+`/refresh`
+- for refresh tokens request
+
 
 ## JWT
 
