@@ -150,6 +150,8 @@ func createUsersTable() error {
 
 // GET: `/login?provider=google` - redirects to Google OAuth
 func loginHandler(c echo.Context) error {
+	// TODO: add email check here if it exists in database
+	// if not then reject access
 	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
 }
