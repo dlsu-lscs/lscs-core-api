@@ -51,3 +51,15 @@ needs:
 - signing key
 - signing key
 - algo
+
+
+UPDATR:
+get data of officers from API (officersdb)
+then store in central db here for auth
+update User schema to match the officersdb
+add endpoints for validating users:
+- /validate - check user email exists in database
+- /login - match the officersdb
+- add redirect to /login?provider=google for everything /login
+  - invalidate query param if not google
+- /refresh-token - should be logged in first

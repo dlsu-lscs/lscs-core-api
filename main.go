@@ -59,8 +59,14 @@ type JwtCustomClaims struct {
 
 var dbpool *pgxpool.Pool
 
-// TODO: db vars here
-// var ()
+// TODO: for refactoring db vars here
+var (
+	database = os.Getenv("DB_DATABASE")
+	username = os.Getenv("DB_USERNAME")
+	password = os.Getenv("DB_PASSWORD")
+	port     = os.Getenv("DB_PORT")
+	host     = os.Getenv("DB_HOST")
+)
 
 func main() {
 	err := godotenv.Load()
@@ -99,7 +105,7 @@ func main() {
 	e.GET("/login", loginHandler) // NOTE: use `/login?provider=google` when calling
 	e.GET("/auth/google/callback", googleAuthCallback)
 	e.POST("/logout", logoutHandler)
-	// e.GET("/refresh-token", refreshTokenHandler)
+	// e.GET("/refresh", refreshTokenHandler)
 
 	needsJWT := e.Group("/auth")
 	needsJWT.Use(echojwt.WithConfig(echojwt.Config{
@@ -113,6 +119,7 @@ func main() {
 
 	// TODO: callback after successful auth
 	e.GET("/allUsers")
+	e.GET("/refresh") // add a validation here, only those who are logged in can request a refresh token
 
 	// Start server
 	e.Logger.Fatal(e.Start(":2323"))
