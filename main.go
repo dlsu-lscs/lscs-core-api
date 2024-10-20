@@ -81,11 +81,6 @@ func main() {
 	}
 	defer dbpool.Close()
 
-	err = createUsersTable()
-	if err != nil {
-		log.Fatalf("Error creating users table: %v", err)
-	}
-
 	goth.UseProviders(google.New(
 		os.Getenv("GOOGLE_CLIENT_ID"),
 		os.Getenv("GOOGLE_CLIENT_SECRET"),
@@ -128,24 +123,6 @@ func main() {
 // **** Handlers ****//
 func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
-}
-
-// TODO: error handle (don't panic when users table already exists)
-func createUsersTable() error {
-	query := `
-        CREATE TABLE IF NOT EXISTS users (
-            email VARCHAR(255) NOT NULL UNIQUE,
-            name VARCHAR(255),
-            avatar_url VARCHAR(255),
-            role VARCHAR(50)
-        );
-    `
-	_, err := dbpool.Exec(context.Background(), query)
-	if err != nil {
-		log.Printf("Failed to create users table")
-		return fmt.Errorf("Failed to create users table: %w", err)
-	}
-	return nil
 }
 
 // GET: `/login?provider=google` - redirects to Google OAuth
@@ -198,14 +175,6 @@ func googleAuthCallback(c echo.Context) error {
 	})
 }
 
-func tokenCallback() error {
-	// send the JWT signed string (with symmetric key/secret) to client
-	// -> return user profile info with JWT token in an HttpOnly cookie
-	return c.JSON(http.StatusOK, echo.Map{
-		"token": tokenSignedString,
-	})
-}
-
 // POST: `/logout` - invalidate session, client-side token invalidation
 func logoutHandler(c echo.Context) error {
 	// TODO: logoutHandler: check if this is redundant
@@ -217,11 +186,6 @@ func logoutHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"message": "Logged out successfully"})
 }
 
-// func refreshTokenHandler(c echo.Context) error {
-// 	return nil
-// }
-
-// TODO: make this for manual insert
 func autoSaveUser(user *goth.User) error {
 	query := `
         INSERT INTO users (email, name, avatar_url, role)
