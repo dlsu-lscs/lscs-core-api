@@ -1,32 +1,50 @@
 # LSCS Central Auth API
 
-## TODOs
-
-- [x] feat: testing db sqlite (for dev)
-- [ ] feat: port database to MongoDB or PostgreSQL (for production)
-- [ ] feat: add token generation (JWT and refresh tokens)
-    - [ ] feat: add `id`, `email`, etc. from google `profile` in JWT as Claims
-    - [ ] docs: frontend to verify JWT
-- [ ] build: dockerize for dev and prod builds
-- [ ] chore: update to es6
-- [ ] rewrite/port to Go
-
 ## Route Endpoints
 
 Everything will be redirected to `/` after successful login
 
-`/login?provider=google`
+### GET `/members`
+
+- returns all LSCS members from database
+
+### POST `/check-email`
+- checks if the email exists in database (indicating if it is an LSCS member or not)
+- example request:
+```json
+{
+    "email": "edwin_sadiarinjr@dlsu.edu.ph"
+}
+```
+- example response:
+```json
+{ // success
+  "email": "edwin_sadiarinjr@dlsu.edu.ph",
+  "state": "present",
+  "success": "Email is an LSCS member"
+}
+
+{ // fail
+  "email": "test@dlsu.edu.ph",
+  "error": "Not an LSCS member",
+  "state": "absent"
+}
+
+```
+
+GET `/login?provider=google`
 - endpoint for logging in to google
 - if successful: will receive token via 
 - **update: just check/validate if user is already in the database (meaning they are an LSCS member)**
 
-`/auth/google/callback`
+GET `/auth/google/callback`
 - google callback
 
-`/invalidate`
+POST `/invalidate`
 - for logging out
 
-<<<<<<< HEAD
+### WIP
+
 `/refresh`
 - for refresh tokens request
 
@@ -61,8 +79,4 @@ add endpoints for validating users:
 
 
 # Database Schema
-=======
-### For testing
 
-`/users`
->>>>>>> 0e201e3 (refactor: to es6 IN PROGRESS checkpoint)
