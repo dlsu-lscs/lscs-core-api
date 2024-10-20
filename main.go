@@ -1,19 +1,21 @@
 package main
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 
 	"github.com/golang-jwt/jwt/v5"
 	echojwt "github.com/labstack/echo-jwt/v4"
 
+	"github.com/dlsu-lscs/lscs-central-auth-api/internal/db"
+
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/markbates/goth"
@@ -57,29 +59,51 @@ type JwtCustomClaims struct {
 	jwt.RegisteredClaims
 }
 
-var dbpool *pgxpool.Pool
-
-// TODO: for refactoring db vars here
-var (
-	database = os.Getenv("DB_DATABASE")
-	username = os.Getenv("DB_USERNAME")
-	password = os.Getenv("DB_PASSWORD")
-	port     = os.Getenv("DB_PORT")
-	host     = os.Getenv("DB_HOST")
-)
+var dbconn *sql.DB
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file.")
+	env := os.Getenv("GO_ENV") // this is included in Dockerfile or in Env vars in Coolify
+	if env == "" {
+		env = "development"
 	}
 
-	dbpool, err = pgxpool.New(context.Background(), os.Getenv("DATABASE_URL"))
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Unable to create database connection pool: %v", err)
-		os.Exit(1)
+	var envFile string
+	switch env {
+	case "production":
+		envFile = ".env.production" // TODO: GO_ENV = "production" should be set on coolify or dockerfile for production to work
+	default:
+		envFile = ".env.development"
 	}
-	defer dbpool.Close()
+
+	err := godotenv.Load(envFile)
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v\n", err)
+	}
+
+	fmt.Printf("ENV: %v (using %v)\n", env, envFile)
+
+	// MySQL connection string format: username:password@tcp(host:port)/dbname
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s",
+		os.Getenv("DB_USERNAME"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_DATABASE"),
+	)
+
+	dbconn, err = sql.Open("mysql", dsn)
+	if err != nil {
+		log.Fatalf("Error connecting to the database: %v", err)
+	}
+	dbconn.SetConnMaxLifetime(0)
+	dbconn.SetMaxIdleConns(50)
+	dbconn.SetMaxOpenConns(50)
+	defer dbconn.Close()
+
+	// test connection
+	if err := dbconn.Ping(); err != nil {
+		log.Fatalf("unable to connect to database: %v", err)
+	}
 
 	goth.UseProviders(google.New(
 		os.Getenv("GOOGLE_CLIENT_ID"),
@@ -97,9 +121,11 @@ func main() {
 
 	// Routes
 	e.GET("/", hello)
-	e.GET("/login", loginHandler) // NOTE: use `/login?provider=google` when calling
+	e.GET("/members", getAllMembersHandler)
+	e.POST("/check-email", checkEmailHandler)
+	e.GET("/login?provider=google", loginHandler)
 	e.GET("/auth/google/callback", googleAuthCallback)
-	e.POST("/logout", logoutHandler)
+	e.POST("/invalidate", invalidateHandler)
 	// e.GET("/refresh", refreshTokenHandler)
 
 	needsJWT := e.Group("/auth")
@@ -110,11 +136,7 @@ func main() {
 		SigningMethod: "HS256",
 		SigningKey:    []byte(os.Getenv("JWT_SECRET")),
 	}))
-	needsJWT.GET("/profile", profileHandler) // NOTE: protected /auth/profile route for testing
-
-	// TODO: callback after successful auth
-	e.GET("/allUsers")
-	e.GET("/refresh") // add a validation here, only those who are logged in can request a refresh token
+	// needsJWT.GET("/profile", profileHandler) // NOTE: protected /auth/profile route for testing
 
 	// Start server
 	e.Logger.Fatal(e.Start(":2323"))
@@ -127,8 +149,7 @@ func hello(c echo.Context) error {
 
 // GET: `/login?provider=google` - redirects to Google OAuth
 func loginHandler(c echo.Context) error {
-	// TODO: add email check here if it exists in database
-	// if not then reject access
+	// TODO: add redirection to `/login?provider=google` when hitting raw `/login`
 	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
 }
@@ -140,13 +161,10 @@ func googleAuthCallback(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, "Error completing Google authentication")
 	}
 	fmt.Printf("\nUser: %v\n", user)
-	// TODO: check first if user is in the database already
-	// store user to db --> should save to postgresql
-	err = autoSaveUser(&user)
-	if err != nil {
-		log.Printf("Error saving user to database: %v", err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error when saving user to database"})
-	}
+
+	// TODO: add email check here if user that verified is an LSCS Officer
+	// if user.Email does not exist in database, then reject, otherwise accept and generate new JWT with refresh token
+	// q := `SELECT `
 
 	// generate JWT with custom claims and sign it (symmetric key)
 	claims := &JwtCustomClaims{
@@ -175,8 +193,8 @@ func googleAuthCallback(c echo.Context) error {
 	})
 }
 
-// POST: `/logout` - invalidate session, client-side token invalidation
-func logoutHandler(c echo.Context) error {
+// POST: `/invalidate` - invalidate session, client-side token invalidation
+func invalidateHandler(c echo.Context) error {
 	// TODO: logoutHandler: check if this is redundant
 	err := gothic.Logout(c.Response(), c.Request())
 	if err != nil {
@@ -186,46 +204,94 @@ func logoutHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"message": "Logged out successfully"})
 }
 
-func autoSaveUser(user *goth.User) error {
-	query := `
-        INSERT INTO users (email, name, avatar_url, role)
-        VALUES ($1, $2, $3, $4)
-        ON CONFLICT (email) DO NOTHING;
-    `
-	role := "Member"
-	_, err := dbpool.Exec(context.Background(), query, user.Email, user.Name, user.AvatarURL, role)
-	if err != nil {
-		log.Printf("Error saving user to database: %v", err)
-		return err
-	}
-	// TODO: UPDATE query for role
-
-	return nil
-}
+// for adding new users (lscs members)
+// func autoSaveUser(user *goth.User) error {
+// 	query := `
+//         INSERT INTO users (email, name, avatar_url, role)
+//         VALUES (?, ?, ?, ?)
+//         ON DUPLICATE KEY UPDATE name = VALUES(name), avatar_url = VALUES(avatar_url), role = VALUES(role);
+//     `
+// 	role := "Member"
+// 	_, err := db.Exec(query, user.Email, user.Name, user.AvatarURL, role)
+// 	if err != nil {
+// 		log.Printf("Error saving user to database: %v", err)
+// 		return err
+// 	}
+// 	// TODO: UPDATE query for role
+//
+// 	return nil
+// }
 
 // protected route for testing JWT - returns user profile
-func profileHandler(c echo.Context) error {
-	// TODO: profileHandler: profile tasks
-	// - [x] get user token
-	userToken := c.Get("user").(*jwt.Token)
-	claims := userToken.Claims.(*JwtCustomClaims)
-	// - [x] get claims -> retrieve the email
-	// - [x] query SELECT the user profile info
-	// - [x] return JSON
-	fmt.Printf("Received JWT Claims: %v\n", claims)
+// func profileHandler(c echo.Context) error {
+// 	// TODO: profileHandler: profile tasks
+// 	// - [x] get user token
+// 	userToken := c.Get("user").(*jwt.Token)
+// 	claims := userToken.Claims.(*JwtCustomClaims)
+// 	// - [x] get claims -> retrieve the email
+// 	// - [x] query SELECT the user profile info
+// 	// - [x] return JSON
+// 	fmt.Printf("Received JWT Claims: %v\n", claims)
+//
+// 	var email, name, avatar_url, role string
+//
+// 	query := `SELECT email, name, avatar_url, role FROM users WHERE email = ?`
+// 	err := db.QueryRow(query, claims.Email).Scan(&email, &name, &avatar_url, &role)
+// 	if err != nil {
+// 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error retrieving info from database."})
+// 	}
+//
+// 	return c.JSON(http.StatusOK, echo.Map{
+// 		"email":     email,
+// 		"name":      name,
+// 		"avatarURL": avatar_url,
+// 		"role":      role,
+// 	})
+// }
 
-	var email, name, avatar_url, role string
+func getAllMembersHandler(c echo.Context) error {
+	ctx := c.Request().Context()
 
-	query := `SELECT email, name, avatar_url, role FROM users WHERE email = $1;`
-	err := dbpool.QueryRow(context.Background(), query, claims.Email).Scan(&email, &name, &avatar_url, &role) // TODO:
+	queries := db.New(dbconn)
+
+	members, err := queries.ListMembers(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error retrieving info from database."})
+		log.Printf("Failed to list members: %v", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to list members"})
+	}
+
+	return c.JSON(http.StatusOK, members)
+}
+
+type EmailRequest struct {
+	Email string `json:"email" validate:"required,email"`
+}
+
+func checkEmailHandler(c echo.Context) error {
+	req := new(EmailRequest)
+
+	if err := c.Bind(req); err != nil {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request body"})
+	}
+	if req.Email == "" {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "email is required"})
+	}
+
+	ctx := c.Request().Context()
+	queries := db.New(dbconn)
+	memberEmail, err := queries.CheckEmailIfMember(ctx, req.Email)
+	if err != nil {
+		log.Printf("Not an LSCS member!: %v", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Not an LSCS member",
+			"state": "absent",
+			"email": memberEmail,
+		})
 	}
 
 	return c.JSON(http.StatusOK, echo.Map{
-		"email":     email,
-		"name":      name,
-		"avatarURL": avatar_url,
-		"role":      role,
+		"success": "Email is an LSCS member",
+		"state":   "present",
+		"email":   memberEmail,
 	})
 }
