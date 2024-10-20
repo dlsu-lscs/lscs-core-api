@@ -23,16 +23,6 @@ import (
 	"github.com/markbates/goth/providers/google"
 )
 
-// example simple struct for User (schema)
-type User struct {
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	AvatarURL string `json:"avatar_url"`
-	Role      string `json:"role"`
-}
-
-// this is returned by goth.User struct:
-
 // type UserFromGoth struct {
 // 	RawData           map[string]interface{}
 // 	Provider          string
@@ -102,7 +92,7 @@ func main() {
 
 	// test connection
 	if err := dbconn.Ping(); err != nil {
-		log.Fatalf("unable to connect to database: %v", err)
+		log.Fatalf("Unable to connect to database: %v", err)
 	}
 
 	goth.UseProviders(google.New(
@@ -136,7 +126,7 @@ func main() {
 		SigningMethod: "HS256",
 		SigningKey:    []byte(os.Getenv("JWT_SECRET")),
 	}))
-	// needsJWT.GET("/profile", profileHandler) // NOTE: protected /auth/profile route for testing
+	// needsJWT.GET("/profile", profileHandler) // NOTE: exmaple protected /auth/profile route for testing
 
 	// Start server
 	e.Logger.Fatal(e.Start(":2323"))
@@ -204,51 +194,6 @@ func invalidateHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{"message": "Logged out successfully"})
 }
 
-// for adding new users (lscs members)
-// func autoSaveUser(user *goth.User) error {
-// 	query := `
-//         INSERT INTO users (email, name, avatar_url, role)
-//         VALUES (?, ?, ?, ?)
-//         ON DUPLICATE KEY UPDATE name = VALUES(name), avatar_url = VALUES(avatar_url), role = VALUES(role);
-//     `
-// 	role := "Member"
-// 	_, err := db.Exec(query, user.Email, user.Name, user.AvatarURL, role)
-// 	if err != nil {
-// 		log.Printf("Error saving user to database: %v", err)
-// 		return err
-// 	}
-// 	// TODO: UPDATE query for role
-//
-// 	return nil
-// }
-
-// protected route for testing JWT - returns user profile
-// func profileHandler(c echo.Context) error {
-// 	// TODO: profileHandler: profile tasks
-// 	// - [x] get user token
-// 	userToken := c.Get("user").(*jwt.Token)
-// 	claims := userToken.Claims.(*JwtCustomClaims)
-// 	// - [x] get claims -> retrieve the email
-// 	// - [x] query SELECT the user profile info
-// 	// - [x] return JSON
-// 	fmt.Printf("Received JWT Claims: %v\n", claims)
-//
-// 	var email, name, avatar_url, role string
-//
-// 	query := `SELECT email, name, avatar_url, role FROM users WHERE email = ?`
-// 	err := db.QueryRow(query, claims.Email).Scan(&email, &name, &avatar_url, &role)
-// 	if err != nil {
-// 		return c.JSON(http.StatusInternalServerError, echo.Map{"message": "Error retrieving info from database."})
-// 	}
-//
-// 	return c.JSON(http.StatusOK, echo.Map{
-// 		"email":     email,
-// 		"name":      name,
-// 		"avatarURL": avatar_url,
-// 		"role":      role,
-// 	})
-// }
-
 func getAllMembersHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -271,21 +216,26 @@ func checkEmailHandler(c echo.Context) error {
 	req := new(EmailRequest)
 
 	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "invalid request body"})
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request body"})
 	}
 	if req.Email == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "email is required"})
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Email is required"})
 	}
 
 	ctx := c.Request().Context()
 	queries := db.New(dbconn)
 	memberEmail, err := queries.CheckEmailIfMember(ctx, req.Email)
 	if err != nil {
-		log.Printf("Not an LSCS member!: %v", err)
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "Not an LSCS member",
+				"state": "absent",
+				"email": memberEmail,
+			})
+		}
+		log.Printf("Error checking email: %v", err)
 		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": "Not an LSCS member",
-			"state": "absent",
-			"email": memberEmail,
+			"error": "Internal server error",
 		})
 	}
 
