@@ -5,13 +5,21 @@ import (
 	"os"
 	"time"
 
+	"github.com/dlsu-lscs/lscs-central-auth-api/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GenerateRefreshToken(email string) (string, err) {
-	claims := &jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 25 * time.Hour)),
-		Subject:   email,
+func GenerateRefreshToken(email string) (string, error) {
+	// claims := JwtCustomClaims{
+	// 	ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 25 * time.Hour)),
+	// 	Subject:   email,
+	// }
+
+	claims := models.JwtCustomClaims{
+		Email: email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(7 * 25 * time.Hour)),
+		},
 	}
 	fmt.Printf("\nGenerated JWT Claims: %+v\n", claims)
 

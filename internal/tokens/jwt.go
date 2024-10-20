@@ -5,12 +5,13 @@ import (
 	"os"
 	"time"
 
+	"github.com/dlsu-lscs/lscs-central-auth-api/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Generates JWT with custom claims and returns a signed token string
 func GenerateJWT(email string) (string, error) {
-	// generate JWT with custom claims and sign it (symmetric key)
-	claims := JwtCustomClaims{
+	claims := models.JwtCustomClaims{
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
