@@ -1,4 +1,7 @@
-.env
+.env.production
+.env.development
+.env.prod
+.env.dev
 var
 
 # Node.js

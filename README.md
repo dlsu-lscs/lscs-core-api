@@ -29,7 +29,7 @@ Everything will be redirected to `/` after successful login
 `/auth/google/callback`
 - google callback
 
-`/logout`
+`/invalidate`
 - for logging out
 
 `/refresh`
@@ -53,7 +53,7 @@ needs:
 - algo
 
 
-UPDATR:
+UPDATE:
 get data of officers from API (officersdb)
 then store in central db here for auth
 update User schema to match the officersdb
@@ -63,3 +63,8 @@ add endpoints for validating users:
 - add redirect to /login?provider=google for everything /login
   - invalidate query param if not google
 - /refresh-token - should be logged in first
+
+
+# Database Schema
+
+

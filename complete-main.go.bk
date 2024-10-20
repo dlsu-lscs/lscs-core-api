@@ -76,7 +76,7 @@ func main() {
 	// Routes
 	e.GET("/auth/google", beginGoogleAuth)             // Google login route
 	e.GET("/auth/google/callback", googleAuthCallback) // Google callback route
-	e.POST("/logout", logout)                          // Logout route
+	e.POST("/invalidate", logout)                          // Logout route
 
 	// Protected route
 	e.GET("/profile", profile, middleware.JWTWithConfig(middleware.JWTConfig{
