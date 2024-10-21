@@ -219,6 +219,7 @@ func googleAuthCallback(c echo.Context) error {
 
 	// send the JWT signed string (with symmetric key/secret) to client
 	// -> return user profile info with JWT token in an HttpOnly cookie
+	// TODO: also return member info so use ListInfoMember in queries or sum
 	return c.JSON(http.StatusOK, echo.Map{
 		// "access_token": jwt,
 		// "refresh_token": rt,
@@ -309,6 +310,6 @@ func refreshTokenHandler(c echo.Context) error {
 	// --> then store newRefreshToken in the database
 	return c.JSON(http.StatusOK, echo.Map{
 		"access_token": "return new access token here", // TODO: handle refreshing tokens
-		// "refresh_token": newRefreshToken, // TODO: handle refreshing tokens
+		// "refresh_token": newRefreshToken,
 	})
 }
