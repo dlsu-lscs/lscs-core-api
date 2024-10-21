@@ -1,8 +1,16 @@
 # LSCS Central Auth API
 
+The official *Authentication Microservice* of **La Salle Computer Society (LSCS)**
+
+## Usage
+
+This is an auth microservice, meant to be used by an application backend.
+
+*Treat this like a "middleware" with extra features, only for authenticating LSCS Members and returning necessary data from them.*
+
+
 ## Route Endpoints
 
-Everything will be redirected to `/` after successful login
 
 ### GET `/members`
 
