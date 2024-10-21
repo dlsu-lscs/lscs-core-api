@@ -17,19 +17,13 @@ func GenerateJWT(email string) (string, error) {
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
 		},
 	}
-	fmt.Printf("\nGenerated JWT Claims: %+v\n", claims)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	fmt.Printf("\nGenerated token raw: %+v\n", token)
 
 	tokenSignedString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
 		return "", err
 	}
-	fmt.Printf("\nGenerated JWT Token: %s\n", tokenSignedString)
 
 	return tokenSignedString, nil
-}
-
-func Parse() {
 }
