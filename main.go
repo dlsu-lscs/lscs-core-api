@@ -132,7 +132,7 @@ func main() {
 	e.GET("/members", getAllMembersHandler)
 	e.POST("/check-email", checkEmailHandler)
 	e.POST("/invalidate", invalidateHandler)
-	// e.GET("/refresh", refreshTokenHandler)
+	e.POST("/refresh-token", refreshTokenHandler)
 
 	adminGroup := e.Group("/admin")
 	adminGroup.Use(echojwt.WithConfig(echojwt.Config{
@@ -225,7 +225,7 @@ func googleAuthCallback(c echo.Context) error {
 		"access_token": tokenSignedString,
 		"user":         user,
 		"email":        email,
-		"status":       "Email is an LSCS member",
+		"success":      "Email is an LSCS member",
 		"state":        "present",
 	})
 }
@@ -296,5 +296,19 @@ func checkEmailHandler(c echo.Context) error {
 		"success": "Email is an LSCS member",
 		"state":   "present",
 		"email":   memberEmail,
+	})
+}
+
+// TODO: implement this for admin access route groups
+func refreshTokenHandler(c echo.Context) error {
+	// get refresh token from request header frfr
+	// get hashed token from database
+	// call CompareTokens to compare
+	// if valid, tokens.GenerateJWT (generate new access token)
+	// --> also generate new refreshToken maybe (call tokens.GenerateRefreshToken)
+	// --> then store newRefreshToken in the database
+	return c.JSON(http.StatusOK, echo.Map{
+		"access_token": "return new access token here", // TODO: handle refreshing tokens
+		// "refresh_token": newRefreshToken, // TODO: handle refreshing tokens
 	})
 }
