@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -95,11 +96,23 @@ func main() {
 		log.Fatalf("Unable to connect to database: %v", err)
 	}
 
+	ss := os.Getenv("SESSION_SECRET")
+	if ss == "" {
+		log.Fatal("No session secret configured.")
+	}
+
+	// NOTE: this is for admin things (for the future, if need admin micro-frontend for adding new LSCS members to central auth database)
+	store := sessions.NewCookieStore([]byte(ss)) // maybe use redis for session management (storing session data), but thats future ppl problems kekw
+	store.Options.HttpOnly = true
+	store.Options.Path = "/"
+	store.Options.MaxAge = 0
+	gothic.Store = store
+
 	goth.UseProviders(google.New(
 		os.Getenv("GOOGLE_CLIENT_ID"),
 		os.Getenv("GOOGLE_CLIENT_SECRET"),
-		"http://localhost:2323/auth/google/callback", // TODO: add prod callback in google console
-		"email", "profile", // scopes - can add openIDConnect if necessary
+		"http://localhost:42069/auth/google/callback", // TODO: add prod callback in google console
+		"email", "profile",
 	))
 
 	// Echo instance
@@ -109,27 +122,30 @@ func main() {
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 
-	// Routes
+	// Main Authentication Routes
+	e.GET("/authenticate", authenticateHandler) // `/authenticate?provider=google`
+	e.GET("/auth/google/callback", googleAuthCallback)
+
+	// TODO: should these routes be protected?
+	// --> reasoning: only authorized roles can access this?
 	e.GET("/", hello)
 	e.GET("/members", getAllMembersHandler)
 	e.POST("/check-email", checkEmailHandler)
-	e.GET("/login?provider=google", loginHandler)
-	e.GET("/auth/google/callback", googleAuthCallback)
 	e.POST("/invalidate", invalidateHandler)
 	// e.GET("/refresh", refreshTokenHandler)
 
-	needsJWT := e.Group("/auth")
-	needsJWT.Use(echojwt.WithConfig(echojwt.Config{
+	adminGroup := e.Group("/admin")
+	adminGroup.Use(echojwt.WithConfig(echojwt.Config{
 		NewClaimsFunc: func(c echo.Context) jwt.Claims {
 			return new(JwtCustomClaims)
 		},
 		SigningMethod: "HS256",
 		SigningKey:    []byte(os.Getenv("JWT_SECRET")),
 	}))
-	// needsJWT.GET("/profile", profileHandler) // NOTE: exmaple protected /auth/profile route for testing
+	// adminGroup.GET("/profile", profileHandler) // NOTE: exmaple protected /admin/profile route for testing
 
 	// Start server
-	e.Logger.Fatal(e.Start(":2323"))
+	e.Logger.Fatal(e.Start(":42069"))
 }
 
 // **** Handlers ****//
@@ -137,9 +153,15 @@ func hello(c echo.Context) error {
 	return c.String(http.StatusOK, "Hello, World!")
 }
 
-// GET: `/login?provider=google` - redirects to Google OAuth
-func loginHandler(c echo.Context) error {
-	// TODO: add redirection to `/login?provider=google` when hitting raw `/login`
+// GET: `/authenticate?provider=google` - redirects to Google OAuth
+func authenticateHandler(c echo.Context) error {
+	// if user, err := gothic.CompleteUserAuth(c.Response(), c.Request()); err == nil {
+	// 	fmt.Printf("Already authenticated: %v\n", user)
+	// 	return c.JSON(http.StatusOK, echo.Map{ // TODO: if doesn't work then maybe check to database?
+	// 		"msg":  "Already authenticated",
+	// 		"data": user,
+	// 	})
+	// }
 	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
 }
@@ -150,48 +172,78 @@ func googleAuthCallback(c echo.Context) error {
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, "Error completing Google authentication")
 	}
-	fmt.Printf("\nUser: %v\n", user)
 
-	// TODO: add email check here if user that verified is an LSCS Officer
 	// if user.Email does not exist in database, then reject, otherwise accept and generate new JWT with refresh token
-	// q := `SELECT `
+	ctx := c.Request().Context()
+	queries := db.New(dbconn)
+	email, err := queries.CheckEmailIfMember(ctx, user.Email)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return c.JSON(http.StatusNotFound, echo.Map{
+				"error": "Not an LSCS member",
+				"state": "absent",
+				"email": email,
+			})
+		}
+		log.Printf("Error checking email: %v", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Internal server error",
+		})
+	}
 
-	// generate JWT with custom claims and sign it (symmetric key)
+	// WARN: START: remove when modularizing (see code below)
 	claims := &JwtCustomClaims{
 		Email: user.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
 		},
 	}
-	fmt.Printf("\nGenerated JWT Claims: %+v\n", claims)
-
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	fmt.Printf("\nGenerated token raw: %+v\n", token)
 
 	tokenSignedString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
 		log.Printf("Failed to generate JWT: %v", err)
 		return c.JSON(http.StatusInternalServerError, "Error generating JWT")
 	}
-	fmt.Printf("\nGenerated JWT Token: %s\n", tokenSignedString)
+	// WARN: END: remove when modularizing (see code below)
+
+	// NOTE: call this when modularizing
+	// jwt, err := tokens.GenerateJWT(memberEmail)
+	// if err != nil {
+	// 	log.Printf("Error generating JWT: %v\n", err)
+	// }
+	// rt, err := tokens.GenerateRefreshToken(memberEmail)
+	// if err != nil {
+	// 	log.Printf("Error generating Refresh Token: %v\n", err)
+	// }
 
 	// send the JWT signed string (with symmetric key/secret) to client
 	// -> return user profile info with JWT token in an HttpOnly cookie
 	return c.JSON(http.StatusOK, echo.Map{
-		"token": tokenSignedString,
-		"user":  user,
+		// "access_token": jwt,
+		// "refresh_token": rt,
+		"access_token": tokenSignedString,
+		"user":         user,
+		"email":        email,
+		"status":       "Email is an LSCS member",
+		"state":        "present",
 	})
 }
 
 // POST: `/invalidate` - invalidate session, client-side token invalidation
 func invalidateHandler(c echo.Context) error {
-	// TODO: logoutHandler: check if this is redundant
 	err := gothic.Logout(c.Response(), c.Request())
 	if err != nil {
-		return err
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to log out from session"})
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{"message": "Logged out successfully"})
+	// token := c.Get("user").(*jwt.Token)
+	// claims := token.Claims.(*JwtCustomClaims)
+
+	// then create a query to invalidate refresh token (requires a refresh_token table in the db)
+
+	c.Response().Header().Set("Location", "/")
+	return c.NoContent(http.StatusTemporaryRedirect)
 }
 
 func getAllMembersHandler(c echo.Context) error {
@@ -212,6 +264,7 @@ type EmailRequest struct {
 	Email string `json:"email" validate:"required,email"`
 }
 
+// this will be included in the google auth callback handler
 func checkEmailHandler(c echo.Context) error {
 	req := new(EmailRequest)
 
