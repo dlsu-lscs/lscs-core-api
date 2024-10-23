@@ -2,6 +2,7 @@
 .env.development
 .env.prod
 .env.dev
+.env
 var
 
 # Node.js

@@ -18,25 +18,10 @@ import (
 )
 
 func main() {
-	env := os.Getenv("GO_ENV") // NOTE: environment variables are to be placed in Coolify or hosting provider
-	if env == "" {
-		env = "development"
-	}
-
-	var envFile string
-	switch env {
-	case "production":
-		envFile = ".env.production" // TODO: GO_ENV = "production" should be set on coolify or dockerfile for production to work
-	default:
-		envFile = ".env.development"
-	}
-
-	err := godotenv.Load(envFile)
+	err := godotenv.Load() // NOTE: environment variables are to be placed in Coolify or hosting provider
 	if err != nil {
 		log.Fatalf("Error loading .env file: %v\n", err)
 	}
-
-	fmt.Printf("ENV: %v (using %v)\n", env, envFile)
 
 	ss := os.Getenv("SESSION_SECRET")
 	if ss == "" {
