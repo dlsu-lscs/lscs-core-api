@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/fatih/color"
 	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
 
@@ -58,9 +59,11 @@ func main() {
 
 	srv := server.NewServer()
 
+	c := color.New(color.FgGreen, color.Bold)
+	c.Printf("Listening on port %s\n", srv.Addr)
 	// Start server on port :42069 ...yeah
 	err = srv.ListenAndServe()
 	if err != nil {
-		panic(fmt.Sprintf("Server error: %v", err))
+		log.Fatalf(fmt.Sprintf("Server error: %v", err))
 	}
 }
