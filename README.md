@@ -6,7 +6,7 @@ The official *Authentication Microservice* of **La Salle Computer Society (LSCS)
 
 This is an auth microservice, meant to be used by an application backend.
 
-*Treat this like a "middleware" with extra features, only for authenticating LSCS Members and returning necessary data from them.*
+*Treat this as a service that simply returns a JSON payload, used only for authenticating LSCS Members and returning necessary data from them.*
 
 
 ## Auth Endpoints
@@ -14,6 +14,7 @@ This is an auth microservice, meant to be used by an application backend.
 ### GET `/authenticate?provider=google`
 
 - the main authentication endpoint that will redirect users to google authentication page
+    - NOTE: only emails with `@dlsu.edu.ph` domain are able to authenticate.
 
 - example `response` (assuming already authenticated with Google):
 ```json
@@ -21,6 +22,8 @@ This is an auth microservice, meant to be used by an application backend.
   "email": "edwin_sadiarinjr@dlsu.edu.ph",
   "access_token": "examplejwttokenskibidiiwanttosleepnowits5inthemorning",
   "refresh_token": "refreshtokenexamplegimmetwicealbumpls",
+  "member_info":   {...},
+  "google_info":   {...},
   "success": "Email is an LSCS member"
   "state": "present",
 }
@@ -47,17 +50,22 @@ This is an auth microservice, meant to be used by an application backend.
 
 ### GET `/members`
 
-- returns all LSCS members from database
+- returns all LSCS members from database (*yes*)
 
 ### POST `/check-email`
 
 - checks if the email exists in database (indicating if it is an LSCS member or not)
 
 - example `request`:
-```json
-{
-    "email": "edwin_sadiarinjr@dlsu.edu.ph"
-}
+```bash
+curl -X POST http://localhost:42069/check-email \
+  -H "Content-Type: application/json" \
+  -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
+
+# in JSON (request):
+# {
+#   "email": "edwin_sadiarinjr@dlsu.edu.ph",
+# }
 ```
 - example `response`:
 ```json
@@ -73,37 +81,3 @@ This is an auth microservice, meant to be used by an application backend.
   "state": "absent"
 }
 ```
-
-
-
-## JWT
-
-flow:
-- client req to `/login` endpoint
--  `/login` endpoint -> redirects to google oauth2 login page
--  google
-- hit backend
-- generate JWT with Claims
--  response with HttpOnly Cookie
--  for every request, decode JWT using JWT asm/sym secret
-
-needs:
-- signing key
-- signing key
-- algo
-
-
-UPDATE:
-get data of officers from API (officersdb)
-then store in central db here for auth
-update User schema to match the officersdb
-add endpoints for validating users:
-- /validate - check user email exists in database
-- /login - match the officersdb
-- add redirect to /login?provider=google for everything /login
-  - invalidate query param if not google
-- /refresh-token - should be logged in first
-
-
-# Database Schema
-
