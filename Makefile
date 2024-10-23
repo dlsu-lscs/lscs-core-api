@@ -1,5 +1,5 @@
 build:
-	@go build -o bin/lscs-central-auth
+	@go build -o bin/lscs-central-auth ./cmd/api/main.go
 
 run: build
 	@./bin/lscs-central-auth
