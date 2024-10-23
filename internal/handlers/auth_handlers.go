@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
-	"github.com/dlsu-lscs/lscs-central-auth-api/internal/db"
+	"github.com/dlsu-lscs/lscs-central-auth-api/internal/repository"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/tokens"
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
@@ -28,7 +28,7 @@ func GoogleAuthCallback(c echo.Context) error {
 	// if user.Email does not exist in database, then reject, otherwise accept and generate new JWT with refresh token
 	ctx := c.Request().Context()
 	dbconn := database.Connect()
-	queries := db.New(dbconn)
+	queries := repository.New(dbconn)
 	email, err := queries.CheckEmailIfMember(ctx, user.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {

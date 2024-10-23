@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
-	"github.com/dlsu-lscs/lscs-central-auth-api/internal/db"
+	"github.com/dlsu-lscs/lscs-central-auth-api/internal/repository"
 	"github.com/labstack/echo/v4"
 )
 
@@ -17,7 +17,7 @@ type EmailRequest struct {
 func GetAllMembersHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 	dbconn := database.Connect()
-	queries := db.New(dbconn)
+	queries := repository.New(dbconn)
 
 	members, err := queries.ListMembers(ctx)
 	if err != nil {
@@ -41,7 +41,7 @@ func CheckEmailHandler(c echo.Context) error {
 
 	ctx := c.Request().Context()
 	dbconn := database.Connect()
-	queries := db.New(dbconn)
+	queries := repository.New(dbconn)
 	memberEmail, err := queries.CheckEmailIfMember(ctx, req.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
