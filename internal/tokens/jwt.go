@@ -1,17 +1,21 @@
 package tokens
 
 import (
-	"fmt"
 	"os"
 	"time"
 
-	"github.com/dlsu-lscs/lscs-central-auth-api/internal/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 
+type JwtCustomClaims struct {
+	Email string `json:"email"`
+	// default claims like iss, sub, aud, expiresAt, jwtID, etc.
+	jwt.RegisteredClaims
+}
+
 // Generates JWT with custom claims and returns a signed token string
 func GenerateJWT(email string) (string, error) {
-	claims := models.JwtCustomClaims{
+	claims := &JwtCustomClaims{
 		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 72)),
