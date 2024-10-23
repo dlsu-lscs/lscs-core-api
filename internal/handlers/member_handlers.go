@@ -1,10 +1,11 @@
-package controllers
+package handlers
 
 import (
 	"database/sql"
 	"log"
 	"net/http"
 
+	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/db"
 	"github.com/labstack/echo/v4"
 )
@@ -15,7 +16,7 @@ type EmailRequest struct {
 
 func GetAllMembersHandler(c echo.Context) error {
 	ctx := c.Request().Context()
-
+	dbconn := database.Connect()
 	queries := db.New(dbconn)
 
 	members, err := queries.ListMembers(ctx)
@@ -39,6 +40,7 @@ func CheckEmailHandler(c echo.Context) error {
 	}
 
 	ctx := c.Request().Context()
+	dbconn := database.Connect()
 	queries := db.New(dbconn)
 	memberEmail, err := queries.CheckEmailIfMember(ctx, req.Email)
 	if err != nil {

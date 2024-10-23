@@ -1,27 +1,19 @@
-package controllers
+package handlers
 
 import (
 	"database/sql"
 	"log"
 	"net/http"
 
+	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/db"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/tokens"
 	"github.com/labstack/echo/v4"
 	"github.com/markbates/goth/gothic"
 )
 
-var dbconn *sql.DB
-
 // GET: `/authenticate?provider=google` - redirects to Google OAuth
 func AuthenticateHandler(c echo.Context) error {
-	// if user, err := gothic.CompleteUserAuth(c.Response(), c.Request()); err == nil {
-	// 	fmt.Printf("Already authenticated: %v\n", user)
-	// 	return c.JSON(http.StatusOK, echo.Map{ // TODO: if doesn't work then maybe check to database?
-	// 		"msg":  "Already authenticated",
-	// 		"data": user,
-	// 	})
-	// }
 	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
 }
@@ -35,6 +27,7 @@ func GoogleAuthCallback(c echo.Context) error {
 
 	// if user.Email does not exist in database, then reject, otherwise accept and generate new JWT with refresh token
 	ctx := c.Request().Context()
+	dbconn := database.Connect()
 	queries := db.New(dbconn)
 	email, err := queries.CheckEmailIfMember(ctx, user.Email)
 	if err != nil {
@@ -51,7 +44,13 @@ func GoogleAuthCallback(c echo.Context) error {
 		})
 	}
 
-	// NOTE: call this when modularizing
+	member, err := queries.GetMember(ctx, email)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Internal server error",
+		})
+	}
+
 	jwt, err := tokens.GenerateJWT(email)
 	if err != nil {
 		log.Printf("Error generating JWT: %v\n", err)
@@ -67,10 +66,11 @@ func GoogleAuthCallback(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"access_token":  jwt,
 		"refresh_token": rt,
-		"user":          user,
 		"email":         email,
 		"success":       "Email is an LSCS member",
 		"state":         "present",
+		"member_info":   member,
+		"google_info":   user,
 	})
 }
 
@@ -89,3 +89,22 @@ func InvalidateHandler(c echo.Context) error {
 	c.Response().Header().Set("Location", "/")
 	return c.NoContent(http.StatusTemporaryRedirect)
 }
+
+// type UserFromGoth struct {
+// 	RawData           map[string]interface{}
+// 	Provider          string
+// 	Email             string
+// 	Name              string
+// 	FirstName         string
+// 	LastName          string
+// 	NickName          string
+// 	Description       string
+// 	UserID            string
+// 	AvatarURL         string
+// 	Location          string
+// 	AccessToken       string
+// 	AccessTokenSecret string
+// 	RefreshToken      string
+// 	ExpiresAt         time.Time
+// 	IDToken           string
+// }
