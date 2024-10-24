@@ -18,9 +18,12 @@ import (
 )
 
 func main() {
-	err := godotenv.Load() // NOTE: environment variables are to be placed in Coolify or hosting provider
-	if err != nil {
-		log.Fatalf("Error loading .env file: %v\n", err)
+	env := os.Getenv("GO_ENV")
+	if env == "" || env == "development" {
+		err := godotenv.Load() // NOTE: production environment variables are to be placed in Coolify or hosting provider
+		if err != nil {
+			log.Fatalf("Error loading .env file: %v\n", err)
+		}
 	}
 
 	ss := os.Getenv("SESSION_SECRET")
@@ -47,7 +50,7 @@ func main() {
 	c := color.New(color.FgGreen, color.Bold)
 	c.Printf("Listening on port %s\n", srv.Addr)
 	// Start server on port :42069 ...yeah
-	err = srv.ListenAndServe()
+	err := srv.ListenAndServe()
 	if err != nil {
 		log.Fatalf(fmt.Sprintf("Server error: %v", err))
 	}
