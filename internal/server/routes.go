@@ -10,6 +10,7 @@ import (
 	echojwt "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	"golang.org/x/time/rate"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
@@ -17,6 +18,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(rate.Limit(20))))
 
 	// v1 := e.Group("/v1") // NOTE: if versioning APIs, change param of funcs to group type and use nested groups for routes
 
