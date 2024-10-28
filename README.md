@@ -60,6 +60,7 @@ This is an auth microservice, meant to be used by an application backend.
 ```bash
 curl -X POST http://localhost:42069/check-email \
   -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <JWT-Access-Token>" \
   -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
 
 # in JSON (request):

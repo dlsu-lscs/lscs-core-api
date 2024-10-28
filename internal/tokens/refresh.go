@@ -7,7 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func GenerateRefreshToken(email string) (string, error) {
+func GenerateRefreshToken() (string, error) {
 	rawToken, err := generateRawToken()
 	if err != nil {
 		return "", nil

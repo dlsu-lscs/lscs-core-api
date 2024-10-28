@@ -60,9 +60,6 @@ func GoogleAuthCallback(c echo.Context) error {
 		log.Printf("Error generating Refresh Token: %v\n", err)
 	}
 
-	// send the JWT signed string (with symmetric key/secret) to client
-	// -> return user profile info with JWT token in an HttpOnly cookie
-	// TODO: also return member info so use ListInfoMember in queries or sum
 	return c.JSON(http.StatusOK, echo.Map{
 		"access_token":  jwt,
 		"refresh_token": rt,
