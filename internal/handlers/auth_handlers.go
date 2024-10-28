@@ -55,7 +55,7 @@ func GoogleAuthCallback(c echo.Context) error {
 	if err != nil {
 		log.Printf("Error generating JWT: %v\n", err)
 	}
-	rt, err := tokens.GenerateRefreshToken(email)
+	rt, err := tokens.GenerateRefreshToken()
 	if err != nil {
 		log.Printf("Error generating Refresh Token: %v\n", err)
 	}
