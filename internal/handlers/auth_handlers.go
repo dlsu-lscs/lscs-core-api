@@ -83,7 +83,7 @@ func GoogleAuthCallback(c echo.Context) error {
 		Secure: true,
 	})
 
-	redirectURI := c.Get("redirect_uri").(string)
+	redirectURI := c.Get("redirectURI").(string)
 	return c.Redirect(http.StatusTemporaryRedirect, redirectURI+"?token="+jwt)
 	// return c.JSON(http.StatusOK, echo.Map{
 	// 	"email":       email,
