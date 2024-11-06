@@ -62,30 +62,26 @@ func GoogleAuthCallback(c echo.Context) error {
 		log.Printf("Error generating Refresh Token: %v\n", err)
 	}
 
-	// c.SetCookie(&http.Cookie{
-	// 	Name:   "access_token",
-	// 	Value:  jwt,
-	// 	Path:   "/",
-	// 	Secure: true,
-	// })
-	//
-	// c.SetCookie(&http.Cookie{
-	// 	Name:   "refresh_token",
-	// 	Value:  rt,
-	// 	Path:   "/",
-	// 	Secure: true,
-	// })
-	//
-	// c.SetCookie(&http.Cookie{
-	// 	Name:   "email",
-	// 	Value:  email,
-	// 	Path:   "/",
-	// 	Secure: true,
-	// })
+	c.SetCookie(&http.Cookie{
+		Name:   "access_token",
+		Value:  jwt,
+		Path:   "/",
+		Secure: true,
+	})
 
-	// redirectURI := c.Get("redirectURI").(string)
-	// c.Response().Header().Set("Location", redirectURI)
-	// return c.Redirect(http.StatusTemporaryRedirect, redirectURI+"?token="+jwt)
+	c.SetCookie(&http.Cookie{
+		Name:   "refresh_token",
+		Value:  rt,
+		Path:   "/",
+		Secure: true,
+	})
+
+	c.SetCookie(&http.Cookie{
+		Name:   "email",
+		Value:  email,
+		Path:   "/",
+		Secure: true,
+	})
 
 	c.Set("access_token", jwt)
 	c.Set("refresh_token", rt)
@@ -94,28 +90,14 @@ func GoogleAuthCallback(c echo.Context) error {
 	c.Set("state", "present")
 	c.Set("member_info", member)
 	c.Set("google_info", user)
-	c.Response().Header().Set("Location", "/successful-redirect")
+	// c.Response().Header().Set("Location", "/successful-redirect")
 
-	return c.NoContent(http.StatusTemporaryRedirect)
-	// return c.NoContent(http.StatusTemporaryRedirect)
-	// return c.JSON(http.StatusOK, echo.Map{
-	// 	"email":       email,
-	// 	"success":     "Email is an LSCS member",
-	// 	"state":       "present",
-	// 	"member_info": member,
-	// 	"google_info": user,
-	// })
-}
-
-func SuccessfulRedirect(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
-		"access_token":  c.Get("access_token"),
-		"refresh_token": c.Get("refresh_token"),
-		"email":         c.Get("email"),
-		"success":       c.Get("success"),
-		"state":         c.Get("state"),
-		"member_info":   c.Get("member_info"),
-		"google_info":   c.Get("google_info"),
+		"email":       email,
+		"success":     "Email is an LSCS member",
+		"state":       "present",
+		"member_info": member,
+		"google_info": user,
 	})
 }
 
