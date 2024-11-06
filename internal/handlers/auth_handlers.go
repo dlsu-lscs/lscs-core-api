@@ -14,13 +14,14 @@ import (
 
 // GET: `/authenticate?provider=google` - redirects to Google OAuth
 func AuthenticateHandler(c echo.Context) error {
+	redirectURI := c.QueryParam("redirect_uri")
+	c.Set("redirectURI", redirectURI)
 	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
 }
 
 // GET: `/auth/google/callback` - handle callback, assume user authenticated
 func GoogleAuthCallback(c echo.Context) error {
-	redirectURI := c.QueryParam("redirect_uri")
 	user, err := gothic.CompleteUserAuth(c.Response(), c.Request())
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, "Error completing Google authentication")
@@ -82,8 +83,10 @@ func GoogleAuthCallback(c echo.Context) error {
 		Secure: true,
 	})
 
+	redirectURI := c.Get("redirectURI").(string)
 	c.Response().Header().Set("Location", redirectURI)
-	return c.NoContent(http.StatusTemporaryRedirect)
+	return c.Redirect(http.StatusTemporaryRedirect, redirectURI+"?token="+jwt)
+	// return c.NoContent(http.StatusTemporaryRedirect)
 	// return c.JSON(http.StatusOK, echo.Map{
 	// 	"email":       email,
 	// 	"success":     "Email is an LSCS member",
