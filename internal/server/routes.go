@@ -33,7 +33,11 @@ func registerAuthRoutes(e *echo.Echo) {
 	e.GET("/", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, "good")
 	})
+	e.GET("/test", func(c echo.Context) error {
+		return c.JSON(http.StatusOK, echo.Map{"test": "tseter"})
+	})
 	e.GET("/authenticate", handlers.AuthenticateHandler) // `/authenticate?provider=google`
+	e.GET("/successful-redirect", handlers.SuccessfulRedirect)
 	e.GET("/auth/google/callback", handlers.GoogleAuthCallback)
 	e.POST("/invalidate", handlers.InvalidateHandler)
 }

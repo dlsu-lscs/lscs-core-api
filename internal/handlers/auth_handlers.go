@@ -14,8 +14,8 @@ import (
 
 // GET: `/authenticate?provider=google` - redirects to Google OAuth
 func AuthenticateHandler(c echo.Context) error {
-	redirectURI := c.QueryParam("redirect_uri")
-	c.Set("redirectURI", redirectURI)
+	// redirectURI := c.QueryParam("redirect_uri")
+	// c.Set("redirectURI", redirectURI)
 	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
 }
@@ -46,12 +46,12 @@ func GoogleAuthCallback(c echo.Context) error {
 		})
 	}
 
-	// member, err := queries.GetMember(ctx, email)
-	// if err != nil {
-	// 	return c.JSON(http.StatusInternalServerError, echo.Map{
-	// 		"error": "Internal server error",
-	// 	})
-	// }
+	member, err := queries.GetMember(ctx, email)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Internal server error",
+		})
+	}
 
 	jwt, err := tokens.GenerateJWT(email)
 	if err != nil {
@@ -62,30 +62,41 @@ func GoogleAuthCallback(c echo.Context) error {
 		log.Printf("Error generating Refresh Token: %v\n", err)
 	}
 
-	c.SetCookie(&http.Cookie{
-		Name:   "access_token",
-		Value:  jwt,
-		Path:   "/",
-		Secure: true,
-	})
+	// c.SetCookie(&http.Cookie{
+	// 	Name:   "access_token",
+	// 	Value:  jwt,
+	// 	Path:   "/",
+	// 	Secure: true,
+	// })
+	//
+	// c.SetCookie(&http.Cookie{
+	// 	Name:   "refresh_token",
+	// 	Value:  rt,
+	// 	Path:   "/",
+	// 	Secure: true,
+	// })
+	//
+	// c.SetCookie(&http.Cookie{
+	// 	Name:   "email",
+	// 	Value:  email,
+	// 	Path:   "/",
+	// 	Secure: true,
+	// })
 
-	c.SetCookie(&http.Cookie{
-		Name:   "refresh_token",
-		Value:  rt,
-		Path:   "/",
-		Secure: true,
-	})
+	// redirectURI := c.Get("redirectURI").(string)
+	// c.Response().Header().Set("Location", redirectURI)
+	// return c.Redirect(http.StatusTemporaryRedirect, redirectURI+"?token="+jwt)
 
-	c.SetCookie(&http.Cookie{
-		Name:   "email",
-		Value:  email,
-		Path:   "/",
-		Secure: true,
-	})
+	c.Response().Header().Set("Location", "/successful-redirect")
+	c.Set("access_token", jwt)
+	c.Set("refresh_token", rt)
+	c.Set("email", email)
+	c.Set("success", "Email is an LSCS member")
+	c.Set("state", "present")
+	c.Set("member_info", member)
+	c.Set("google_info", user)
 
-	redirectURI := c.Get("redirectURI").(string)
-	c.Response().Header().Set("Location", redirectURI)
-	return c.Redirect(http.StatusTemporaryRedirect, redirectURI+"?token="+jwt)
+	return c.NoContent(http.StatusTemporaryRedirect)
 	// return c.NoContent(http.StatusTemporaryRedirect)
 	// return c.JSON(http.StatusOK, echo.Map{
 	// 	"email":       email,
@@ -94,6 +105,18 @@ func GoogleAuthCallback(c echo.Context) error {
 	// 	"member_info": member,
 	// 	"google_info": user,
 	// })
+}
+
+func SuccessfulRedirect(c echo.Context) error {
+	return c.JSON(http.StatusOK, echo.Map{
+		"access_token":  c.Get("email"),
+		"refresh_token": c.Get("refresh_token"),
+		"email":         c.Get("email"),
+		"success":       c.Get("success"),
+		"state":         c.Get("state"),
+		"member_info":   c.Get("member_info"),
+		"google_info":   c.Get("google_info"),
+	})
 }
 
 // POST: `/invalidate` - invalidate session, client-side token invalidation
