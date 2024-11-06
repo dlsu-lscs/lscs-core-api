@@ -109,7 +109,7 @@ func GoogleAuthCallback(c echo.Context) error {
 
 func SuccessfulRedirect(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
-		"access_token":  c.Get("email"),
+		"access_token":  c.Get("access_token"),
 		"refresh_token": c.Get("refresh_token"),
 		"email":         c.Get("email"),
 		"success":       c.Get("success"),
