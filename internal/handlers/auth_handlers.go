@@ -94,6 +94,7 @@ func GoogleAuthCallback(c echo.Context) error {
 	c.Set("google_info", user)
 
 	redirectURI := c.Get("redirectURI").(string)
+	fmt.Println(redirectURI)
 	c.Response().Header().Set("Location", redirectURI)
 	return c.Redirect(http.StatusTemporaryRedirect, redirectURI)
 	// return c.JSON(http.StatusOK, echo.Map{
