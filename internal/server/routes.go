@@ -37,7 +37,6 @@ func registerAuthRoutes(e *echo.Echo) {
 		return c.JSON(http.StatusOK, echo.Map{"test": "tseter"})
 	})
 	e.GET("/authenticate", handlers.AuthenticateHandler) // `/authenticate?provider=google`
-	e.GET("/successful-redirect", handlers.SuccessfulRedirect)
 	e.GET("/auth/google/callback", handlers.GoogleAuthCallback)
 	e.POST("/invalidate", handlers.InvalidateHandler)
 }
