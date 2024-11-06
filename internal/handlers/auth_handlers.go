@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -14,8 +15,9 @@ import (
 
 // GET: `/authenticate?provider=google` - redirects to Google OAuth
 func AuthenticateHandler(c echo.Context) error {
-	// redirectURI := c.QueryParam("redirect_uri")
-	// c.Set("redirectURI", redirectURI)
+	redirectURI := c.QueryParam("redirect_uri")
+	c.Set("redirectURI", redirectURI)
+	fmt.Println(redirectURI)
 	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
 }
@@ -90,15 +92,17 @@ func GoogleAuthCallback(c echo.Context) error {
 	c.Set("state", "present")
 	c.Set("member_info", member)
 	c.Set("google_info", user)
-	// c.Response().Header().Set("Location", "/successful-redirect")
 
-	return c.JSON(http.StatusOK, echo.Map{
-		"email":       email,
-		"success":     "Email is an LSCS member",
-		"state":       "present",
-		"member_info": member,
-		"google_info": user,
-	})
+	redirectURI := c.Get("redirectURI").(string)
+	c.Response().Header().Set("Location", redirectURI)
+	return c.Redirect(http.StatusTemporaryRedirect, redirectURI)
+	// return c.JSON(http.StatusOK, echo.Map{
+	// 	"email":       email,
+	// 	"success":     "Email is an LSCS member",
+	// 	"state":       "present",
+	// 	"member_info": member,
+	// 	"google_info": user,
+	// })
 }
 
 // POST: `/invalidate` - invalidate session, client-side token invalidation
