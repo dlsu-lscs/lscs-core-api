@@ -14,6 +14,8 @@ import (
 
 // GET: `/authenticate?provider=google` - redirects to Google OAuth
 func AuthenticateHandler(c echo.Context) error {
+	redirectURI := c.QueryParam("redirect_uri")
+	c.Set("redirectURI", redirectURI)
 	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
 }
@@ -82,7 +84,8 @@ func GoogleAuthCallback(c echo.Context) error {
 	})
 
 	c.Response().Header().Set("Location", "/")
-	return c.NoContent(http.StatusTemporaryRedirect)
+	redirectURI := c.Get("redirect_uri").(string)
+	return c.Redirect(http.StatusTemporaryRedirect, redirectURI+"?token="+jwt)
 	// return c.JSON(http.StatusOK, echo.Map{
 	// 	"email":       email,
 	// 	"success":     "Email is an LSCS member",
