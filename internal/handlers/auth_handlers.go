@@ -44,12 +44,12 @@ func GoogleAuthCallback(c echo.Context) error {
 		})
 	}
 
-	member, err := queries.GetMember(ctx, email)
-	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": "Internal server error",
-		})
-	}
+	// member, err := queries.GetMember(ctx, email)
+	// if err != nil {
+	// 	return c.JSON(http.StatusInternalServerError, echo.Map{
+	// 		"error": "Internal server error",
+	// 	})
+	// }
 
 	jwt, err := tokens.GenerateJWT(email)
 	if err != nil {
@@ -60,15 +60,36 @@ func GoogleAuthCallback(c echo.Context) error {
 		log.Printf("Error generating Refresh Token: %v\n", err)
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{
-		"access_token":  jwt,
-		"refresh_token": rt,
-		"email":         email,
-		"success":       "Email is an LSCS member",
-		"state":         "present",
-		"member_info":   member,
-		"google_info":   user,
+	c.SetCookie(&http.Cookie{
+		Name:   "access_token",
+		Value:  jwt,
+		Path:   "/",
+		Secure: true,
 	})
+
+	c.SetCookie(&http.Cookie{
+		Name:   "refresh_token",
+		Value:  rt,
+		Path:   "/",
+		Secure: true,
+	})
+
+	c.SetCookie(&http.Cookie{
+		Name:   "email",
+		Value:  email,
+		Path:   "/",
+		Secure: true,
+	})
+
+	c.Response().Header().Set("Location", "/")
+	return c.NoContent(http.StatusTemporaryRedirect)
+	// return c.JSON(http.StatusOK, echo.Map{
+	// 	"email":       email,
+	// 	"success":     "Email is an LSCS member",
+	// 	"state":       "present",
+	// 	"member_info": member,
+	// 	"google_info": user,
+	// })
 }
 
 // POST: `/invalidate` - invalidate session, client-side token invalidation
