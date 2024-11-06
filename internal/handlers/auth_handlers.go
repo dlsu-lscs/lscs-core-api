@@ -87,7 +87,6 @@ func GoogleAuthCallback(c echo.Context) error {
 	// c.Response().Header().Set("Location", redirectURI)
 	// return c.Redirect(http.StatusTemporaryRedirect, redirectURI+"?token="+jwt)
 
-	c.Response().Header().Set("Location", "/successful-redirect")
 	c.Set("access_token", jwt)
 	c.Set("refresh_token", rt)
 	c.Set("email", email)
@@ -95,6 +94,7 @@ func GoogleAuthCallback(c echo.Context) error {
 	c.Set("state", "present")
 	c.Set("member_info", member)
 	c.Set("google_info", user)
+	c.Response().Header().Set("Location", "/successful-redirect")
 
 	return c.NoContent(http.StatusTemporaryRedirect)
 	// return c.NoContent(http.StatusTemporaryRedirect)
