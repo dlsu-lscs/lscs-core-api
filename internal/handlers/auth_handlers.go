@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -15,9 +14,6 @@ import (
 
 // GET: `/authenticate?provider=google` - redirects to Google OAuth
 func AuthenticateHandler(c echo.Context) error {
-	redirectURI := c.QueryParam("redirect_uri")
-	c.Set("redirectURI", redirectURI)
-	fmt.Println(redirectURI)
 	gothic.BeginAuthHandler(c.Response(), c.Request())
 	return nil
 }
@@ -65,24 +61,30 @@ func GoogleAuthCallback(c echo.Context) error {
 	}
 
 	c.SetCookie(&http.Cookie{
-		Name:   "access_token",
-		Value:  jwt,
-		Path:   "/",
-		Secure: true,
+		Name:     "access_token",
+		Value:    jwt,
+		Domain:   ".app.dlsu-lscs.org",
+		Path:     "/",
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
 	})
 
 	c.SetCookie(&http.Cookie{
-		Name:   "refresh_token",
-		Value:  rt,
-		Path:   "/",
-		Secure: true,
+		Name:     "refresh_token",
+		Value:    rt,
+		Domain:   ".app.dlsu-lscs.org",
+		Path:     "/",
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
 	})
 
 	c.SetCookie(&http.Cookie{
-		Name:   "email",
-		Value:  email,
-		Path:   "/",
-		Secure: true,
+		Name:     "email",
+		Value:    email,
+		Domain:   ".app.dlsu-lscs.org",
+		Path:     "/",
+		SameSite: http.SameSiteNoneMode,
+		Secure:   true,
 	})
 
 	c.Set("access_token", jwt)
@@ -93,17 +95,16 @@ func GoogleAuthCallback(c echo.Context) error {
 	c.Set("member_info", member)
 	c.Set("google_info", user)
 
-	redirectURI := c.Get("redirectURI").(string)
-	fmt.Println(redirectURI)
-	c.Response().Header().Set("Location", redirectURI)
-	return c.Redirect(http.StatusTemporaryRedirect, redirectURI)
-	// return c.JSON(http.StatusOK, echo.Map{
-	// 	"email":       email,
-	// 	"success":     "Email is an LSCS member",
-	// 	"state":       "present",
-	// 	"member_info": member,
-	// 	"google_info": user,
-	// })
+	// redirectURI := c.Get("redirectURI").(string)
+	// c.Response().Header().Set("Location", redirectURI)
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"email":       email,
+		"success":     "Email is an LSCS member",
+		"state":       "present",
+		"member_info": member,
+		"google_info": user,
+	})
 }
 
 // POST: `/invalidate` - invalidate session, client-side token invalidation
