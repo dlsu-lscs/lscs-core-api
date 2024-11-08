@@ -14,6 +14,37 @@ type EmailRequest struct {
 	Email string `json:"email" validate:"required,email"`
 }
 
+func GetMemberInfo(c echo.Context) error {
+	ctx := c.Request().Context()
+	dbconn := database.Connect()
+	q := repository.New(dbconn)
+
+	req := new(EmailRequest)
+	if err := c.Bind(req); err != nil {
+		log.Printf("Failed to parse request body: %v", err)
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
+	}
+
+	// TODO: add go-validator for validating request body to structs
+	// if err := c.Validate(req); err != nil {
+	// 	log.Printf("Validation error: %v", err)
+	// 	return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid email format"})
+	// }
+
+	memberInfo, err := q.GetMemberInfo(ctx, req.Email)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Email is not an LSCS member"})
+	}
+
+	return c.JSON(http.StatusOK, echo.Map{
+		"email":          memberInfo.Email,
+		"full_name":      memberInfo.FullName,
+		"committee_name": memberInfo.CommitteeName,
+		"division_name":  memberInfo.DivisionName,
+		"position_name":  memberInfo.PositionName,
+	})
+}
+
 func GetAllMembersHandler(c echo.Context) error {
 	ctx := c.Request().Context()
 	dbconn := database.Connect()

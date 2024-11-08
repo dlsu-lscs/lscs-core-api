@@ -29,6 +29,9 @@ type Member struct {
 	Telegram    sql.NullString
 	PositionID  sql.NullString
 	CommitteeID sql.NullString
+	College     sql.NullString
+	Program     sql.NullString
+	Discord     sql.NullString
 }
 
 type Position struct {

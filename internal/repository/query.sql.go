@@ -19,27 +19,38 @@ func (q *Queries) CheckEmailIfMember(ctx context.Context, email string) (string,
 	return email, err
 }
 
-const getMember = `-- name: GetMember :one
-SELECT id, full_name, nickname, email, telegram, position_id, committee_id FROM members WHERE email = ?
+const getMemberInfo = `-- name: GetMemberInfo :one
+SELECT m.email, m.full_name, c.committee_name, d.division_name, p.position_name 
+FROM members m
+JOIN committees c ON m.committee_id = c.committee_id
+JOIN divisions d ON c.division_id = d.division_id
+JOIN positions p ON m.position_id = p.position_id
+WHERE m.email = ?
 `
 
-func (q *Queries) GetMember(ctx context.Context, email string) (Member, error) {
-	row := q.db.QueryRowContext(ctx, getMember, email)
-	var i Member
+type GetMemberInfoRow struct {
+	Email         string
+	FullName      string
+	CommitteeName string
+	DivisionName  string
+	PositionName  string
+}
+
+func (q *Queries) GetMemberInfo(ctx context.Context, email string) (GetMemberInfoRow, error) {
+	row := q.db.QueryRowContext(ctx, getMemberInfo, email)
+	var i GetMemberInfoRow
 	err := row.Scan(
-		&i.ID,
-		&i.FullName,
-		&i.Nickname,
 		&i.Email,
-		&i.Telegram,
-		&i.PositionID,
-		&i.CommitteeID,
+		&i.FullName,
+		&i.CommitteeName,
+		&i.DivisionName,
+		&i.PositionName,
 	)
 	return i, err
 }
 
 const listMembers = `-- name: ListMembers :many
-SELECT id, full_name, nickname, email, telegram, position_id, committee_id FROM members ORDER BY email
+SELECT id, full_name, nickname, email, telegram, position_id, committee_id, college, program, discord FROM members ORDER BY email
 `
 
 func (q *Queries) ListMembers(ctx context.Context) ([]Member, error) {
@@ -59,6 +70,9 @@ func (q *Queries) ListMembers(ctx context.Context) ([]Member, error) {
 			&i.Telegram,
 			&i.PositionID,
 			&i.CommitteeID,
+			&i.College,
+			&i.Program,
+			&i.Discord,
 		); err != nil {
 			return nil, err
 		}

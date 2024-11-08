@@ -14,13 +14,16 @@ CREATE TABLE divisions (
 
 -- Table: members
 CREATE TABLE members (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT UNIQUE PRIMARY KEY,
     full_name VARCHAR(255) NOT NULL,
     nickname VARCHAR(100),
     email VARCHAR(255) UNIQUE NOT NULL,
     telegram VARCHAR(100),
     position_id VARCHAR(10),
     committee_id VARCHAR(10),
+    college VARCHAR(100),
+    program VARCHAR(100),
+    discord VARCHAR(100),
     CONSTRAINT fk_position FOREIGN KEY (position_id) REFERENCES positions(position_id) ON DELETE SET NULL,
     CONSTRAINT fk_committee FOREIGN KEY (committee_id) REFERENCES committees(committee_id) ON DELETE SET NULL
 );

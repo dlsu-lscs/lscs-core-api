@@ -44,7 +44,7 @@ func GoogleAuthCallback(c echo.Context) error {
 		})
 	}
 
-	member, err := queries.GetMember(ctx, email)
+	member, err := queries.GetMemberInfo(ctx, email)
 	if err != nil {
 		return c.JSON(http.StatusInternalServerError, echo.Map{
 			"error": "Internal server error",

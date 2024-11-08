@@ -54,6 +54,7 @@ func registerAdminRoutes(e *echo.Echo) {
 	admin := e.Group("/admin", jwtMiddleware)
 
 	e.GET("/members", handlers.GetAllMembersHandler)
+	e.POST("/member", handlers.GetMemberInfo)
 	e.POST("/check-email", handlers.CheckEmailHandler)
 	admin.POST("/refresh-token", handlers.RefreshTokenHandler)
 	admin.GET("/protected-test", handlers.GetAllMembersHandler)
