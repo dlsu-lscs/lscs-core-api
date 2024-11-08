@@ -6,7 +6,7 @@ The official *Authentication Microservice* of **La Salle Computer Society (LSCS)
 
 This is an auth microservice, meant to be used by an application backend.
 
-*Treat this as a service that simply returns a JSON payload, used only for authenticating LSCS Members and returning necessary data from them.*
+_**Treat this as a service that simply returns a JSON payload, used only for authenticating LSCS Members and returning necessary data from them.**_
 
 
 ## Auth Endpoints
@@ -42,15 +42,40 @@ This is an auth microservice, meant to be used by an application backend.
 - for logging out
 
 
-## Admin Routes
-
-### POST `/refresh-token`
-
-- used for requesting new access tokens using existing refresh-token
+## Member Information Routes
 
 ### GET `/members`
 
 - returns all LSCS members from database (*yes*)
+
+### POST `/member`
+
+- returns `email`, `full_name`, `committee_name`, `position_name`, and `division_name` of the LSCS member 
+- example `request`:
+```bash
+curl -X POST http://localhost:42069/member \
+  -H "Content-Type: application/json" \
+  -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
+
+# in JSON (request):
+# {
+#   "email": "edwin_sadiarinjr@dlsu.edu.ph",
+# }
+```
+- example `response`:
+```json
+{ // success
+  "committee_name": "Research and Development",
+  "division_name": "Internals",
+  "email": "edwin_sadiarinjr@dlsu.edu.ph",
+  "full_name": "Edwin Sadiarin Jr.",
+  "position_name": "Committee Trainee"
+}
+
+{ // fail
+  "error": "Email is not an LSCS member"
+}
+```
 
 ### POST `/check-email`
 
@@ -60,7 +85,6 @@ This is an auth microservice, meant to be used by an application backend.
 ```bash
 curl -X POST http://localhost:42069/check-email \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <JWT-Access-Token>" \
   -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
 
 # in JSON (request):
@@ -82,3 +106,11 @@ curl -X POST http://localhost:42069/check-email \
   "state": "absent"
 }
 ```
+
+
+## Admin Routes
+
+### POST `/refresh-token`
+
+- used for requesting new access tokens using existing refresh-token
+
