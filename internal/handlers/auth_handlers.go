@@ -123,6 +123,28 @@ func InvalidateHandler(c echo.Context) error {
 	return c.NoContent(http.StatusTemporaryRedirect)
 }
 
+// GET or POST: request API key when?
+func RequestAPIKey(c echo.Context) error {
+	jwt, err := tokens.GenerateJWT("")
+	if err != nil {
+		log.Printf("Error generating JWT: %v\n", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Error generating API Key.",
+		})
+	}
+	rt, err := tokens.GenerateRefreshToken()
+	if err != nil {
+		log.Printf("Error generating Refresh Token: %v\n", err)
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": "Error generating refresh token.",
+		})
+	}
+	return c.JSON(200, echo.Map{
+		"api_key":       jwt,
+		"refresh_token": rt,
+	})
+}
+
 // type UserFromGoth struct {
 // 	RawData           map[string]interface{}
 // 	Provider          string

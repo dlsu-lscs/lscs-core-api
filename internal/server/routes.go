@@ -37,6 +37,7 @@ func registerAuthRoutes(e *echo.Echo) {
 		return c.JSON(http.StatusOK, echo.Map{"test": "tseter"})
 	})
 	e.GET("/authenticate", handlers.AuthenticateHandler) // `/authenticate?provider=google`
+	e.GET("/request-key", handlers.RequestAPIKey)        // `/request_key?` TODO: change to POST if need condition before able to request, ex. need to be admin email only
 	e.GET("/auth/google/callback", handlers.GoogleAuthCallback)
 	e.POST("/invalidate", handlers.InvalidateHandler)
 }
@@ -51,11 +52,9 @@ func registerAdminRoutes(e *echo.Echo) {
 		SigningKey:    []byte(os.Getenv("JWT_SECRET")),
 	})
 
-	admin := e.Group("/admin", jwtMiddleware)
-
-	e.GET("/members", handlers.GetAllMembersHandler)
-	e.POST("/member", handlers.GetMemberInfo)
-	e.POST("/check-email", handlers.CheckEmailHandler)
-	admin.POST("/refresh-token", handlers.RefreshTokenHandler)
-	admin.GET("/protected-test", handlers.GetAllMembersHandler)
+	e.GET("/members", handlers.GetAllMembersHandler, jwtMiddleware)
+	e.POST("/member", handlers.GetMemberInfo, jwtMiddleware)
+	e.POST("/check-email", handlers.CheckEmailHandler, jwtMiddleware)
+	e.POST("/refresh-token", handlers.RefreshTokenHandler, jwtMiddleware)
+	e.GET("/protected-test", handlers.GetAllMembersHandler, jwtMiddleware)
 }
