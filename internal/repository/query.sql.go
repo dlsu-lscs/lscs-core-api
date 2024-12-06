@@ -19,6 +19,38 @@ func (q *Queries) CheckEmailIfMember(ctx context.Context, email string) (string,
 	return email, err
 }
 
+const getAllCommittees = `-- name: GetAllCommittees :many
+SELECT committee_id, committee_name, committee_head, committee_division_id FROM committees
+`
+
+func (q *Queries) GetAllCommittees(ctx context.Context) ([]Committee, error) {
+	rows, err := q.db.QueryContext(ctx, getAllCommittees)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Committee
+	for rows.Next() {
+		var i Committee
+		if err := rows.Scan(
+			&i.CommitteeID,
+			&i.CommitteeName,
+			&i.CommitteeHead,
+			&i.CommitteeDivisionID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getMemberInfo = `-- name: GetMemberInfo :one
 SELECT m.email, m.full_name, c.committee_name, d.division_name, p.position_name 
 FROM members m

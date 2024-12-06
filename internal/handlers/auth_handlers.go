@@ -139,7 +139,7 @@ func RequestAPIKey(c echo.Context) error {
 			"error": "Error generating refresh token.",
 		})
 	}
-	return c.JSON(200, echo.Map{
+	return c.JSON(http.StatusOK, echo.Map{
 		"api_key":       jwt,
 		"refresh_token": rt,
 	})

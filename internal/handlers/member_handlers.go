@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -105,5 +106,20 @@ func RefreshTokenHandler(c echo.Context) error {
 	return c.JSON(http.StatusOK, echo.Map{
 		"access_token": "return new access token here", // TODO: handle refreshing tokens
 		// "refresh_token": newRefreshToken,
+	})
+}
+
+func GetAllCommitteesHandler(c echo.Context) error {
+	ctx := c.Request().Context()
+	dbconn := database.Connect()
+	queries := repository.New(dbconn)
+	committees, err := queries.GetAllCommittees(ctx)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{
+			"error": fmt.Sprintf("Internal server error: %v", err),
+		})
+	}
+	return c.JSON(http.StatusOK, echo.Map{
+		"committees": committees,
 	})
 }

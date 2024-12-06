@@ -11,3 +11,6 @@ SELECT * FROM members ORDER BY email;
 
 -- name: CheckEmailIfMember :one
 SELECT email FROM members WHERE email = ?;
+
+-- name: GetAllCommittees :many
+SELECT * FROM committees;
