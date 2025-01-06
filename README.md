@@ -10,6 +10,7 @@ _**Treat this as a service that simply returns a JSON payload, used only for aut
 
 > [!IMPORTANT]
 > **only RND members can request an API key (associated with their DLSU email)** - to prevent unauthorized access
+> **only 1 API key per email** - this is not yet final
 
 
 ## Auth Endpoints
@@ -44,8 +45,7 @@ curl -X POST http://localhost:42069/member \
 ```bash
 curl -X POST http://localhost:42069/request-key \
   -H "Content-Type: application/json" \
-  -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
-  -d '{"pepper": "<CONTACT_ADMIN_DEVELOPER_TO_REVOKE_KEY>"}'
+  -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph", "pepper": "<CONTACT_ADMIN_DEVELOPER_TO_REVOKE_KEY>"}'
 ```
 
 - `response`:

@@ -65,6 +65,21 @@ func RequestAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	emails, err := q.GetEmailsInAPIKey(r.Context())
+	if err != nil {
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		slog.Error("GetEmailsInAPIKey error")
+		return
+	}
+	for _, email := range emails {
+		// no dups (only 1 API key per email)
+		if memEmail == email {
+			http.Error(w, "cannot have multiple API keys", http.StatusForbidden)
+			slog.Error("cannot have multiple API keys", "email", email)
+			return
+		}
+	}
+
 	hashedToken, rawToken, err := tokens.GenerateToken()
 	if err != nil {
 		http.Error(w, `"error": "Error generating refresh token"`, http.StatusInternalServerError)
@@ -122,6 +137,7 @@ func RevokeAPIKey(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: handle when email has no api key yet and revokes it, --> it doesn't error
 	if err := q.DeleteAPIKey(r.Context(), req.Email); err != nil {
 		http.Error(w, `"error": "cannot revoke API key"`, http.StatusNotFound)
 		slog.Error("cannot revoke API key", "error", err)
