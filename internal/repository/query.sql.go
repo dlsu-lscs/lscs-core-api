@@ -20,6 +20,15 @@ func (q *Queries) CheckEmailIfMember(ctx context.Context, email string) (string,
 	return email, err
 }
 
+const deleteAPIKey = `-- name: DeleteAPIKey :exec
+DELETE FROM api_keys WHERE member_email = ?
+`
+
+func (q *Queries) DeleteAPIKey(ctx context.Context, memberEmail string) error {
+	_, err := q.db.ExecContext(ctx, deleteAPIKey, memberEmail)
+	return err
+}
+
 const getAPIKeyInfo = `-- name: GetAPIKeyInfo :one
 SELECT api_key_id, member_email, api_key_hash, created_at, expires_at FROM api_keys WHERE api_key_hash = ?
 `

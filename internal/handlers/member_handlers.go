@@ -2,124 +2,153 @@ package handlers
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/repository"
-	"github.com/labstack/echo/v4"
 )
 
 type EmailRequest struct {
 	Email string `json:"email" validate:"required,email"`
 }
 
-func GetMemberInfo(c echo.Context) error {
-	ctx := c.Request().Context()
+func GetMemberInfo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	dbconn := database.Connect()
+	defer dbconn.Close()
 	q := repository.New(dbconn)
 
 	req := new(EmailRequest)
-	if err := c.Bind(req); err != nil {
-		log.Printf("Failed to parse request body: %v", err)
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request format"})
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		slog.Error("Failed to parse request body", "err", err)
+		http.Error(w, `"error": "Invalid request format"`, http.StatusBadRequest)
+		return
 	}
-
-	// TODO: add go-validator for validating request body to structs
-	// if err := c.Validate(req); err != nil {
-	// 	log.Printf("Validation error: %v", err)
-	// 	return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid email format"})
-	// }
 
 	memberInfo, err := q.GetMemberInfo(ctx, req.Email)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Email is not an LSCS member"})
+		slog.Error("email is not an LSCS member", "err", err)
+		http.Error(w, `"error": "Email is not an LSCS member"`, http.StatusInternalServerError)
+		return
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{
+	response := map[string]string{
 		"email":          memberInfo.Email,
 		"full_name":      memberInfo.FullName,
 		"committee_name": memberInfo.CommitteeName,
 		"division_name":  memberInfo.DivisionName,
 		"position_name":  memberInfo.PositionName,
-	})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
-func GetAllMembersHandler(c echo.Context) error {
-	ctx := c.Request().Context()
+func GetAllMembersHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	dbconn := database.Connect()
+	defer dbconn.Close()
 	queries := repository.New(dbconn)
 
 	members, err := queries.ListMembers(ctx)
 	if err != nil {
-		log.Printf("Failed to list members: %v", err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to list members"})
+		slog.Error("Failed to list members", "err", err)
+		http.Error(w, `"error": "Failed to list members"`, http.StatusInternalServerError)
+		return
 	}
 
-	return c.JSON(http.StatusOK, members)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(members)
 }
 
 // this will be included in the google auth callback handler
-func CheckEmailHandler(c echo.Context) error {
-	req := new(EmailRequest)
+func CheckEmailHandler(w http.ResponseWriter, r *http.Request) {
+	var req EmailRequest // req := new(EmailRequest)
 
-	if err := c.Bind(req); err != nil {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid request body"})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		slog.Error("invalid request body")
+		http.Error(w, `"error": "Invalid request body"`, http.StatusBadRequest)
+		return
 	}
+
 	if req.Email == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Email is required"})
+		slog.Error("email is required")
+		http.Error(w, `"error": "Email is required"`, http.StatusBadRequest)
+		return
 	}
 
-	ctx := c.Request().Context()
+	ctx := r.Context()
 	dbconn := database.Connect()
+	defer dbconn.Close()
 	queries := repository.New(dbconn)
 	memberEmail, err := queries.CheckEmailIfMember(ctx, req.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, echo.Map{
+			response := map[string]string{
 				"error": "Not an LSCS member",
 				"state": "absent",
 				"email": memberEmail,
-			})
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(response)
+			return
 		}
 		log.Printf("Error checking email: %v", err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": "Internal server error",
-		})
+		http.Error(w, `"error": "Internal server error"`, http.StatusInternalServerError)
+		return
 	}
 
-	return c.JSON(http.StatusOK, echo.Map{
+	response := map[string]interface{}{
 		"success": "Email is an LSCS member",
 		"state":   "present",
 		"email":   memberEmail,
-	})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
-func RefreshTokenHandler(c echo.Context) error {
+func RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
 	// get refresh token from request header frfr
 	// get hashed token from database
 	// call CompareTokens to compare
 	// if valid, tokens.GenerateJWT (generate new access token)
 	// --> also generate new refreshToken maybe (call tokens.GenerateRefreshToken)
 	// --> then store newRefreshToken in the database
-	return c.JSON(http.StatusOK, echo.Map{
+	response := map[string]string{
 		"access_token": "return new access token here", // TODO: handle refreshing tokens
-		// "refresh_token": newRefreshToken,
-	})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(response)
 }
 
-func GetAllCommitteesHandler(c echo.Context) error {
-	ctx := c.Request().Context()
+// GetAllCommitteesHandler retrieves and returns all committees.
+func GetAllCommitteesHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	dbconn := database.Connect()
-	queries := repository.New(dbconn)
-	committees, err := queries.GetAllCommittees(ctx)
+	defer dbconn.Close()
+	q := repository.New(dbconn)
+
+	committees, err := q.GetAllCommittees(ctx)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
+		response := map[string]string{
 			"error": fmt.Sprintf("Internal server error: %v", err),
-		})
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(response)
+		return
 	}
-	return c.JSON(http.StatusOK, echo.Map{
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
 		"committees": committees,
 	})
 }

@@ -2,58 +2,50 @@ package server
 
 import (
 	"net/http"
-	"os"
+	"time"
 
+	// "github.com/dlsu-lscs/lscs-central-auth-api/internal/middlewares"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/handlers"
-	"github.com/dlsu-lscs/lscs-central-auth-api/internal/tokens"
-	"github.com/golang-jwt/jwt/v5"
-	echojwt "github.com/labstack/echo-jwt/v4"
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
-	"golang.org/x/time/rate"
+	"github.com/dlsu-lscs/lscs-central-auth-api/internal/middlewares"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/httprate"
 )
 
 func (s *Server) RegisterRoutes() http.Handler {
-	e := echo.New()
+	r := chi.NewRouter()
 
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
-	e.Use(middleware.RateLimiter(middleware.NewRateLimiterMemoryStore(rate.Limit(20))))
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Logger)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.URLFormat)
+	r.Use(httprate.LimitByIP(100, time.Minute))
 
-	// v1 := e.Group("/v1") // NOTE: if versioning APIs, change param of funcs to group type and use nested groups for routes
-
-	registerAuthRoutes(e)
-	registerAdminRoutes(e)
-
-	return e
+	registerAuthRoutes(r)
+	r.Mount("/", registerAdminRoutes())
+	return r
 }
 
 /* Auth Routes */
-func registerAuthRoutes(e *echo.Echo) {
-	e.GET("/", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, "good")
+func registerAuthRoutes(r *chi.Mux) {
+	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("."))
 	})
-	e.GET("/test", func(c echo.Context) error {
-		return c.JSON(http.StatusOK, echo.Map{"test": "tseter"})
+	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("test test test"))
 	})
-	e.GET("/request-key", handlers.RequestAPIKey) // `/request_key?` TODO: change to POST if need condition before able to request, ex. need to be admin email only
-	// e.POST("/invalidate", handlers.InvalidateHandler)
+	r.Post("/request-key", handlers.RequestAPIKey) // `/request_key?` TODO: change to POST if need condition before able to request, ex. need to be admin email only
 }
 
-func registerAdminRoutes(e *echo.Echo) {
+func registerAdminRoutes() chi.Router {
 	/* Protected Routes */
-	jwtMiddleware := echojwt.WithConfig(echojwt.Config{
-		NewClaimsFunc: func(c echo.Context) jwt.Claims {
-			return new(tokens.JwtCustomClaims)
-		},
-		SigningMethod: "HS256",
-		SigningKey:    []byte(os.Getenv("JWT_SECRET")),
-	})
-	middle
+	r := chi.NewRouter()
+	r.Use(middlewares.AdminMiddleware)
 
-	e.GET("/members", handlers.GetAllMembersHandler, jwtMiddleware)
-	e.POST("/member", handlers.GetMemberInfo)
-	e.POST("/check-email", handlers.CheckEmailHandler, jwtMiddleware)
-	e.POST("/refresh-token", handlers.RefreshTokenHandler, jwtMiddleware)
-	e.GET("/protected-test", handlers.GetAllMembersHandler, jwtMiddleware)
+	r.Get("/members", handlers.GetAllMembersHandler)
+	r.Post("/member", handlers.GetMemberInfo)
+	r.Post("/check-email", handlers.CheckEmailHandler)
+	r.Post("/refresh-token", handlers.RefreshTokenHandler)
+	r.Get("/protected-test", handlers.GetAllMembersHandler)
+	return r
 }

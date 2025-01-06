@@ -32,3 +32,6 @@ INSERT INTO api_keys (member_email, api_key_hash, expires_at) VALUES (?, ?, ?);
 
 -- name: GetAPIKeyInfo :one
 SELECT * FROM api_keys WHERE api_key_hash = ?;
+
+-- name: DeleteAPIKey :exec
+DELETE FROM api_keys WHERE member_email = ?;

@@ -33,7 +33,7 @@ func CompareTokens(dbHashTok, reqTok string) error {
 func generateRawToken() (string, error) {
 	bytes := make([]byte, 32)
 	if _, err := rand.Read(bytes); err != nil {
-		slog.Error("failed to generate raw token: ", err)
+		slog.Error("failed to generate raw token ", "error", err)
 		return "", fmt.Errorf("failed to generate raw token: %w", err)
 	}
 

@@ -3,71 +3,114 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/repository"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/tokens"
-	"github.com/labstack/echo/v4"
 )
 
 // only RND members can request API key (to use on their apps)
-func RequestAPIKey(c echo.Context) error {
+func RequestAPIKey(w http.ResponseWriter, r *http.Request) {
 	dbconn := database.Connect()
+	defer dbconn.Close()
 	q := repository.New(dbconn)
 
 	// parse body
 	var req EmailRequest
-	if err := json.NewDecoder(c.Request().Body).Decode(&req); err != nil {
-		// http.Error(c.Response().Writer, "invalid request body", http.StatusBadRequest)
-		return c.JSON(http.StatusNotFound, echo.Map{
-			"error": "cannot read body",
-		})
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `"error": "cannot read body`, http.StatusNotFound)
+		slog.Error("cannot read body", "error", err)
+		return
 	}
 
-	memEmail, err := q.CheckEmailIfMember(c.Request().Context(), req.Email)
+	memEmail, err := q.CheckEmailIfMember(r.Context(), req.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return c.JSON(http.StatusNotFound, echo.Map{
+			response := map[string]string{
 				"error": "Not an LSCS member",
 				"state": "absent",
 				"email": memEmail,
-			})
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(response)
+			return
 		}
-		log.Printf("Error checking email: %v", err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": "Internal server error",
-		})
+		http.Error(w, `"error": "Internal server error"`, http.StatusInternalServerError)
+		slog.Error("error checking email", "error", err)
+		return
 	}
 
-	memberInfo, err := q.GetFullMemberInfo(c.Request().Context(), memEmail)
+	memberInfo, err := q.GetFullMemberInfo(r.Context(), memEmail)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": "Internal server error",
-		})
+		http.Error(w, `"error": "Internal server error"`, http.StatusInternalServerError)
+		slog.Error("GetFullMemberInfo error", "error", err)
+		return
 	}
 
 	// check if RND
 	if memberInfo.CommitteeID != "RND" {
-		// TODO: maybe return json response then shortcircuit
-		http.Error(c.Response().Writer, "Not a Research and Development committee member", http.StatusForbidden)
+		http.Error(w, "Not a Research and Development committee member", http.StatusForbidden)
+		slog.Error("Not a Research and Development committee member")
+		return
 	}
 
-	// TODO: only generate token if
 	hashedToken, rawToken, err := tokens.GenerateToken()
 	if err != nil {
-		log.Printf("Error generating Refresh Token: %v\n", err)
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error": "Error generating refresh token.",
-		})
+		http.Error(w, `"error": "Error generating refresh token"`, http.StatusInternalServerError)
+		slog.Error("Error generating hashed token", "error", err)
+		return
 	}
-	// TODO: send rawToken (plaintext) to the client
-	// TODO: store hashed token (hashedToken) in db [StoreAPIKey(memEmail, hashedToken, expires_at)]
-	return c.JSON(http.StatusOK, echo.Map{
+
+	newAPIKey := repository.StoreAPIKeyParams{
+		MemberEmail: memEmail,
+		ApiKeyHash:  hashedToken,
+		ExpiresAt: sql.NullTime{
+			Time:  time.Now().Add(30 * 24 * time.Hour), // 30 days
+			Valid: true,
+		},
+	}
+
+	if err = q.StoreAPIKey(r.Context(), newAPIKey); err != nil {
+		http.Error(w, `"error": "Error storing API key.",`, http.StatusInternalServerError)
+		slog.Error("error storing API key", "error", err)
+	}
+
+	response := map[string]interface{}{
+		"email":   memberInfo.Email,
 		"api_key": rawToken,
-	})
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
 
-func RevokeAPIKey() {
+// POST: email
+func RevokeAPIKey(w http.ResponseWriter, r *http.Request) {
+	dbconn := database.Connect()
+	defer dbconn.Close()
+	q := repository.New(dbconn)
+	var req EmailRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, `"error": "cannot read body`, http.StatusNotFound)
+		slog.Error("cannot read body", "error", err)
+		return
+	}
+
+	if err := q.DeleteAPIKey(r.Context(), req.Email); err != nil {
+		http.Error(w, `"error": "cannot revoke API key"`, http.StatusNotFound)
+		slog.Error("cannot revoke API key", "error", err)
+		return
+	}
+
+	response := fmt.Sprintf("API key for %s is successfully revoked", req.Email)
+	// w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
