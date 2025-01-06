@@ -29,10 +29,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 /* Auth Routes */
 func registerAuthRoutes(r *chi.Mux) {
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("."))
-	})
-	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("test test test"))
+		w.Write([]byte("it works"))
 	})
 	r.Post("/request-key", handlers.RequestAPIKey) // needs email
 	r.Post("/revoke-key", handlers.RevokeAPIKey)   // needs email
@@ -46,7 +43,5 @@ func registerAdminRoutes() chi.Router {
 	r.Get("/members", handlers.GetAllMembersHandler)
 	r.Post("/member", handlers.GetMemberInfo)
 	r.Post("/check-email", handlers.CheckEmailHandler)
-	r.Post("/refresh-token", handlers.RefreshTokenHandler)
-	r.Get("/protected-test", handlers.GetAllMembersHandler)
 	return r
 }

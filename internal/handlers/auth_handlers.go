@@ -6,12 +6,18 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/repository"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/tokens"
 )
+
+type RevokeRequest struct {
+	Email           string `json:"email"`
+	PepperSecretKey string `json:"pepper"`
+}
 
 // only RND members can request API key (to use on their apps)
 func RequestAPIKey(w http.ResponseWriter, r *http.Request) {
@@ -98,10 +104,21 @@ func RevokeAPIKey(w http.ResponseWriter, r *http.Request) {
 	dbconn := database.Connect()
 	defer dbconn.Close()
 	q := repository.New(dbconn)
-	var req EmailRequest
+	var req RevokeRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, `"error": "cannot read body`, http.StatusNotFound)
 		slog.Error("cannot read body", "error", err)
+		return
+	}
+
+	if req.PepperSecretKey != os.Getenv("PEPPER") {
+		if req.PepperSecretKey == "" {
+			http.Error(w, `"error": "no pepper key provided"`, http.StatusForbidden)
+			slog.Error("no pepper key provided")
+			return
+		}
+		http.Error(w, `"error": "invalid pepper key"`, http.StatusForbidden)
+		slog.Error("invalid pepper key")
 		return
 	}
 

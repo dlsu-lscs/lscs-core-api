@@ -52,6 +52,47 @@ func GetMemberInfo(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type MemberResponse struct {
+	ID          int32            `json:"id"`
+	FullName    string           `json:"full_name"`
+	Nickname    CustomNullString `json:"nickname"`
+	Email       string           `json:"email"`
+	Telegram    CustomNullString `json:"telegram"`
+	PositionID  CustomNullString `json:"position_id"`
+	CommitteeID CustomNullString `json:"committee_id"`
+	College     CustomNullString `json:"college"`
+	Program     CustomNullString `json:"program"`
+	Discord     CustomNullString `json:"discord"`
+}
+
+// Wraps sql.NullString to customize JSON marshaling - to omit sql.NullString struct values on response
+type CustomNullString struct {
+	sql.NullString
+}
+
+// Implements the json.Marshaler interface
+func (cns CustomNullString) MarshalJSON() ([]byte, error) {
+	if cns.Valid {
+		return json.Marshal(cns.String)
+	}
+	return json.Marshal("")
+}
+
+func toMemberResponse(m repository.Member) MemberResponse {
+	return MemberResponse{
+		ID:          m.ID,
+		FullName:    m.FullName,
+		Nickname:    CustomNullString{m.Nickname},
+		Email:       m.Email,
+		Telegram:    CustomNullString{m.Telegram},
+		PositionID:  CustomNullString{m.PositionID},
+		CommitteeID: CustomNullString{m.CommitteeID},
+		College:     CustomNullString{m.College},
+		Program:     CustomNullString{m.Program},
+		Discord:     CustomNullString{m.Discord},
+	}
+}
+
 func GetAllMembersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	dbconn := database.Connect()
@@ -65,9 +106,14 @@ func GetAllMembersHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	response := make([]MemberResponse, 0, len(members))
+	for _, m := range members {
+		response = append(response, toMemberResponse(m))
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(members); err != nil {
+	if err := json.NewEncoder(w).Encode(response); err != nil {
 		slog.Error("Failed to encode JSON response", "error", err)
 		http.Error(w, `{"error": "failed to encode response"}`, http.StatusInternalServerError)
 	}
@@ -122,20 +168,6 @@ func CheckEmailHandler(w http.ResponseWriter, r *http.Request) {
 		slog.Error("Failed to encode JSON response", "error", err)
 		http.Error(w, `{"error": "failed to encode response"}`, http.StatusInternalServerError)
 	}
-}
-
-func RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
-	// get refresh token from request header frfr
-	// get hashed token from database
-	// call CompareTokens to compare
-	// if valid, tokens.GenerateJWT (generate new access token)
-	// --> also generate new refreshToken maybe (call tokens.GenerateRefreshToken)
-	// --> then store newRefreshToken in the database
-	response := map[string]string{
-		"access_token": "return new access token here", // TODO: handle refreshing tokens
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(response)
 }
 
 // GetAllCommitteesHandler retrieves and returns all committees.
