@@ -71,8 +71,10 @@ func RequestAPIKey(w http.ResponseWriter, r *http.Request) {
 		MemberEmail: memEmail,
 		ApiKeyHash:  hashedToken,
 		ExpiresAt: sql.NullTime{
-			Time:  time.Now().Add(30 * 24 * time.Hour), // 30 days
-			Valid: true,
+			Time:  time.Time{}, // never expire, let's make it simple for now
+			Valid: false,
+			// Time:  time.Now().Add(30 * 24 * time.Hour), // 30 days
+			// Valid: true,
 		},
 	}
 
