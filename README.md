@@ -18,6 +18,8 @@ _**Treat this as a service that simply returns a JSON payload, used only for aut
 
 ### POST `/request-key`
 
+- requires `email` in the request body
+
 - `request`:
 ```bash
 curl -X POST http://localhost:42069/member \
@@ -36,6 +38,7 @@ curl -X POST http://localhost:42069/member \
 ### POST `/revoke-key`
 
 - for revoking/deleting key
+- requires `email` and `pepper` in the request body
 
 - `request`:
 ```bash
@@ -53,9 +56,12 @@ API key for <email> is successfully revoked
 
 ## Member Endpoints
 
+- all routes: requires `Authorization: Bearer <API-KEY>` in the request headers
+
 ### GET `/members`
 
 - returns all LSCS members from database (*yes*)
+- requires `Authorization: Bearer <API-KEY>` in the request headers
 
 - `request`:
 ```bash
@@ -96,6 +102,7 @@ curl -X GET http://localhost:42069/member \
 ### POST `/member`
 
 - returns `email`, `full_name`, `committee_name`, `position_name`, and `division_name` of the LSCS member 
+- requires `Authorization: Bearer <API-KEY>` in the request headers
 
 - `request`:
 ```bash
@@ -123,6 +130,7 @@ curl -X POST http://localhost:42069/member \
 ### POST `/check-email`
 
 - checks if the email exists in database (indicating if it is an LSCS member or not)
+- requires `Authorization: Bearer <API-KEY>` in the request headers
 
 - `request`:
 ```bash
