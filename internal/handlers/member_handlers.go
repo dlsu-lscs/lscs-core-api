@@ -46,7 +46,10 @@ func GetMemberInfo(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("Failed to encode JSON response", "error", err)
+		http.Error(w, `{"error": "failed to encode response"}`, http.StatusInternalServerError)
+	}
 }
 
 func GetAllMembersHandler(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +67,10 @@ func GetAllMembersHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(members)
+	if err := json.NewEncoder(w).Encode(members); err != nil {
+		slog.Error("Failed to encode JSON response", "error", err)
+		http.Error(w, `{"error": "failed to encode response"}`, http.StatusInternalServerError)
+	}
 }
 
 // this will be included in the google auth callback handler
@@ -112,7 +118,10 @@ func CheckEmailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("Failed to encode JSON response", "error", err)
+		http.Error(w, `{"error": "failed to encode response"}`, http.StatusInternalServerError)
+	}
 }
 
 func RefreshTokenHandler(w http.ResponseWriter, r *http.Request) {
