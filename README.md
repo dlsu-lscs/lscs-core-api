@@ -9,64 +9,103 @@ _**Treat this as a service that simply returns a JSON payload, used only for aut
 ## Usage
 
 > [!IMPORTANT]
-> 1. **only RND members can request an API key (associated with their DLSU email)** - to prevent unauthorized access
-> 2. **1 API key per DLSU email** - to prevent impersonation and duplicate API keys 
+> **only RND members can request an API key (associated with their DLSU email)** - to prevent unauthorized access
 
 
 ## Auth Endpoints
 
-### GET `/authenticate?provider=google`
+- `[UPDATE 20250107-04:49AM]`: **no longer needs to login to Google**
 
-- the main authentication endpoint that will redirect users to google authentication page
-    - NOTE: only emails with `@dlsu.edu.ph` domain are able to authenticate.
+### POST `/request-key`
 
-- example `response` (assuming already authenticated with Google):
+- `request`:
+```bash
+curl -X POST http://localhost:42069/member \
+  -H "Content-Type: application/json" \
+  -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
+```
+
+- `response`:
 ```json
-{ // success
-  "email": "edwin_sadiarinjr@dlsu.edu.ph",
-  "access_token": "examplejwttokenskibidiiwanttosleepnowits5inthemorning",
-  "refresh_token": "refreshtokenexamplegimmetwicealbumpls",
-  "member_info":   {...},
-  "google_info":   {...},
-  "success": "Email is an LSCS member"
-  "state": "present",
+{
+    "api_key": "somethingsomethingstringssdgasdfkgjdsf",
+    "email": "edwin_sadiarinjr@dlsu.edu.ph"
 }
+```
 
-{ // fail
-  "email": "test@dlsu.edu.ph",
-  "error": "Not an LSCS member",
-  "state": "absent"
-}
+### POST `/revoke-key`
 
+- for revoking/deleting key
+
+- `request`:
+```bash
+curl -X POST http://localhost:42069/request-key \
+  -H "Content-Type: application/json" \
+  -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
+  -d '{"pepper": "<CONTACT_ADMIN_DEVELOPER_TO_REVOKE_KEY>"}'
+```
+
+- `response`:
+```
+API key for <email> is successfully revoked
 ```
 
 
-### POST `/invalidate`
-
-- for logging out
-
-
-## Member Information Routes
+## Member Endpoints
 
 ### GET `/members`
 
 - returns all LSCS members from database (*yes*)
 
+- `request`:
+```bash
+curl -X GET http://localhost:42069/member \
+  -H "Authorization: Bearer <API-KEY>"
+```
+
+- `response`:
+```json
+[
+   {
+     "id": 12312312,
+     "full_name": "Hehe E. Hihi",
+     "nickname": "Huhi",
+     "email": "hehe_hihi@dlsu.edu.ph",
+     "telegram": "",
+     "position_id": "MEM",
+     "committee_id": "MEM",
+     "college": "CCS",
+     "program": "BS-Org",
+     "discord": ""
+   },
+   {
+     "id": 11111110,
+     "full_name": "Peter Parker",
+     "nickname": "Peter",
+     "email": "peter_parker@dlsu.edu.ph",
+     "telegram": "@something",
+     "position_id": "MEM",
+     "committee_id": "MEM",
+     "college": "CLA",
+     "program": "POM-LGL",
+     "discord": ""
+   }
+]
+```
+
 ### POST `/member`
 
 - returns `email`, `full_name`, `committee_name`, `position_name`, and `division_name` of the LSCS member 
-- example `request`:
+
+- `request`:
 ```bash
 curl -X POST http://localhost:42069/member \
+  -H "Authorization: Bearer <API-KEY>" \
   -H "Content-Type: application/json" \
   -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
-
-# in JSON (request):
-# {
-#   "email": "edwin_sadiarinjr@dlsu.edu.ph",
-# }
 ```
-- example `response`:
+
+- `response`:
 ```json
 { // success
   "committee_name": "Research and Development",
@@ -85,18 +124,15 @@ curl -X POST http://localhost:42069/member \
 
 - checks if the email exists in database (indicating if it is an LSCS member or not)
 
-- example `request`:
+- `request`:
 ```bash
 curl -X POST http://localhost:42069/check-email \
+  -H "Authorization: Bearer <API-KEY>" \
   -H "Content-Type: application/json" \
   -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
-
-# in JSON (request):
-# {
-#   "email": "edwin_sadiarinjr@dlsu.edu.ph",
-# }
 ```
-- example `response`:
+
+- `response`:
 ```json
 { // success
   "email": "edwin_sadiarinjr@dlsu.edu.ph",
@@ -110,11 +146,3 @@ curl -X POST http://localhost:42069/check-email \
   "state": "absent"
 }
 ```
-
-
-## Admin Routes
-
-### POST `/refresh-token`
-
-- used for requesting new access tokens using existing refresh-token
-
