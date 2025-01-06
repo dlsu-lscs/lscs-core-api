@@ -36,9 +36,7 @@ func registerAuthRoutes(e *echo.Echo) {
 	e.GET("/test", func(c echo.Context) error {
 		return c.JSON(http.StatusOK, echo.Map{"test": "tseter"})
 	})
-	e.GET("/authenticate", handlers.AuthenticateHandler) // `/authenticate?provider=google`
-	e.GET("/request-key", handlers.RequestAPIKey)        // `/request_key?` TODO: change to POST if need condition before able to request, ex. need to be admin email only
-	e.GET("/auth/google/callback", handlers.GoogleAuthCallback)
+	e.GET("/request-key", handlers.RequestAPIKey) // `/request_key?` TODO: change to POST if need condition before able to request, ex. need to be admin email only
 	e.POST("/invalidate", handlers.InvalidateHandler)
 }
 
