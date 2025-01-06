@@ -21,7 +21,7 @@ func (q *Queries) CheckEmailIfMember(ctx context.Context, email string) (string,
 }
 
 const deleteAPIKey = `-- name: DeleteAPIKey :exec
-DELETE FROM api_keys WHERE member_email = ?
+DELETE FROM api_keys WHERE member_email = ? LIMIT 1
 `
 
 func (q *Queries) DeleteAPIKey(ctx context.Context, memberEmail string) error {
@@ -35,6 +35,23 @@ SELECT api_key_id, member_email, api_key_hash, created_at, expires_at FROM api_k
 
 func (q *Queries) GetAPIKeyInfo(ctx context.Context, apiKeyHash string) (ApiKey, error) {
 	row := q.db.QueryRowContext(ctx, getAPIKeyInfo, apiKeyHash)
+	var i ApiKey
+	err := row.Scan(
+		&i.ApiKeyID,
+		&i.MemberEmail,
+		&i.ApiKeyHash,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
+}
+
+const getAPIKeyInfoWithEmail = `-- name: GetAPIKeyInfoWithEmail :one
+SELECT api_key_id, member_email, api_key_hash, created_at, expires_at FROM api_keys WHERE member_email = ?
+`
+
+func (q *Queries) GetAPIKeyInfoWithEmail(ctx context.Context, memberEmail string) (ApiKey, error) {
+	row := q.db.QueryRowContext(ctx, getAPIKeyInfoWithEmail, memberEmail)
 	var i ApiKey
 	err := row.Scan(
 		&i.ApiKeyID,
@@ -95,6 +112,33 @@ func (q *Queries) GetAllCommittees(ctx context.Context) ([]Committee, error) {
 			return nil, err
 		}
 		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getEmailsInAPIKey = `-- name: GetEmailsInAPIKey :many
+SELECT member_email FROM api_keys
+`
+
+func (q *Queries) GetEmailsInAPIKey(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getEmailsInAPIKey)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var member_email string
+		if err := rows.Scan(&member_email); err != nil {
+			return nil, err
+		}
+		items = append(items, member_email)
 	}
 	if err := rows.Close(); err != nil {
 		return nil, err
