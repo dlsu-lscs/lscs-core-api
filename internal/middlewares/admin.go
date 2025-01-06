@@ -44,6 +44,7 @@ func AdminMiddleware(next http.Handler) http.Handler {
 		}
 
 		slog.Info("token is valid", "hash", hash)
+		// HACK: mysql has probs comparing hashed strings (or not?) idk why (maybe test encoding utf8... on schema directly)
 		// info, err := q.GetAPIKeyInfo(r.Context(), hash)
 		// if err != nil {
 		// 	slog.Error("Failed to retrieve API key - Invalid or expired API key - API key not found")
