@@ -37,3 +37,13 @@ CREATE TABLE committees (
     CONSTRAINT fk_committee_head FOREIGN KEY (committee_head) REFERENCES members(id) ON DELETE SET NULL,
     CONSTRAINT fk_committee_division FOREIGN KEY (committee_division_id) REFERENCES divisions(division_id) ON DELETE SET NULL
 );
+
+-- Table: api_keys
+CREATE TABLE api_keys (
+    api_key_id INT AUTO_INCREMENT PRIMARY KEY,
+    member_email VARCHAR(100) UNIQUE NOT NULL,
+    api_key_hash VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    expires_at TIMESTAMP DEFAULT NULL,
+    CONSTRAINT fk_api_keys_member_email FOREIGN KEY (member_email) REFERENCES members(email) ON DELETE CASCADE
+);

@@ -8,6 +8,14 @@ import (
 	"database/sql"
 )
 
+type ApiKey struct {
+	ApiKeyID    int32
+	MemberEmail string
+	ApiKeyHash  string
+	CreatedAt   sql.NullTime
+	ExpiresAt   sql.NullTime
+}
+
 type Committee struct {
 	CommitteeID         string
 	CommitteeName       string

@@ -7,6 +7,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 )
 
 const checkEmailIfMember = `-- name: CheckEmailIfMember :one
@@ -17,6 +18,23 @@ func (q *Queries) CheckEmailIfMember(ctx context.Context, email string) (string,
 	row := q.db.QueryRowContext(ctx, checkEmailIfMember, email)
 	err := row.Scan(&email)
 	return email, err
+}
+
+const getAPIKeyInfo = `-- name: GetAPIKeyInfo :one
+SELECT api_key_id, member_email, api_key_hash, created_at, expires_at FROM api_keys WHERE api_key_hash = ?
+`
+
+func (q *Queries) GetAPIKeyInfo(ctx context.Context, apiKeyHash string) (ApiKey, error) {
+	row := q.db.QueryRowContext(ctx, getAPIKeyInfo, apiKeyHash)
+	var i ApiKey
+	err := row.Scan(
+		&i.ApiKeyID,
+		&i.MemberEmail,
+		&i.ApiKeyHash,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+	)
+	return i, err
 }
 
 const getAllCommittees = `-- name: GetAllCommittees :many
@@ -49,6 +67,50 @@ func (q *Queries) GetAllCommittees(ctx context.Context) ([]Committee, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const getFullMemberInfo = `-- name: GetFullMemberInfo :one
+SELECT 
+    m.id, m.email, m.full_name, m.nickname,
+    c.committee_id, c.committee_name,
+    d.division_id, d.division_name,
+    p.position_id, p.position_name 
+FROM members m
+JOIN committees c ON m.committee_id = c.committee_id
+JOIN divisions d ON c.division_id = d.division_id
+JOIN positions p ON m.position_id = p.position_id
+WHERE m.email = ?
+`
+
+type GetFullMemberInfoRow struct {
+	ID            int32
+	Email         string
+	FullName      string
+	Nickname      sql.NullString
+	CommitteeID   string
+	CommitteeName string
+	DivisionID    string
+	DivisionName  string
+	PositionID    string
+	PositionName  string
+}
+
+func (q *Queries) GetFullMemberInfo(ctx context.Context, email string) (GetFullMemberInfoRow, error) {
+	row := q.db.QueryRowContext(ctx, getFullMemberInfo, email)
+	var i GetFullMemberInfoRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FullName,
+		&i.Nickname,
+		&i.CommitteeID,
+		&i.CommitteeName,
+		&i.DivisionID,
+		&i.DivisionName,
+		&i.PositionID,
+		&i.PositionName,
+	)
+	return i, err
 }
 
 const getMemberInfo = `-- name: GetMemberInfo :one
@@ -117,4 +179,19 @@ func (q *Queries) ListMembers(ctx context.Context) ([]Member, error) {
 		return nil, err
 	}
 	return items, nil
+}
+
+const storeAPIKey = `-- name: StoreAPIKey :exec
+INSERT INTO api_keys (member_email, api_key_hash, expires_at) VALUES (?, ?, ?)
+`
+
+type StoreAPIKeyParams struct {
+	MemberEmail string
+	ApiKeyHash  string
+	ExpiresAt   sql.NullTime
+}
+
+func (q *Queries) StoreAPIKey(ctx context.Context, arg StoreAPIKeyParams) error {
+	_, err := q.db.ExecContext(ctx, storeAPIKey, arg.MemberEmail, arg.ApiKeyHash, arg.ExpiresAt)
+	return err
 }
