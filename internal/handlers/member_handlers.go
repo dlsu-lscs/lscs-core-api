@@ -65,12 +65,12 @@ type MemberResponse struct {
 	Discord     CustomNullString `json:"discord"`
 }
 
-// Wraps sql.NullString to customize JSON marshaling - to omit sql.NullString struct values on response
+// NOTE: wraps sql.NullString to customize JSON marshaling - to omit sql.NullString struct values on response
 type CustomNullString struct {
 	sql.NullString
 }
 
-// Implements the json.Marshaler interface
+// NOTE: implements the json.Marshaler interface - if nil (sql.Null) then "", otherwise return orig val
 func (cns CustomNullString) MarshalJSON() ([]byte, error) {
 	if cns.Valid {
 		return json.Marshal(cns.String)
