@@ -37,7 +37,7 @@ func registerAuthRoutes(e *echo.Echo) {
 		return c.JSON(http.StatusOK, echo.Map{"test": "tseter"})
 	})
 	e.GET("/request-key", handlers.RequestAPIKey) // `/request_key?` TODO: change to POST if need condition before able to request, ex. need to be admin email only
-	e.POST("/invalidate", handlers.InvalidateHandler)
+	// e.POST("/invalidate", handlers.InvalidateHandler)
 }
 
 func registerAdminRoutes(e *echo.Echo) {
@@ -49,9 +49,10 @@ func registerAdminRoutes(e *echo.Echo) {
 		SigningMethod: "HS256",
 		SigningKey:    []byte(os.Getenv("JWT_SECRET")),
 	})
+	middle
 
 	e.GET("/members", handlers.GetAllMembersHandler, jwtMiddleware)
-	e.POST("/member", handlers.GetMemberInfo, jwtMiddleware)
+	e.POST("/member", handlers.GetMemberInfo)
 	e.POST("/check-email", handlers.CheckEmailHandler, jwtMiddleware)
 	e.POST("/refresh-token", handlers.RefreshTokenHandler, jwtMiddleware)
 	e.GET("/protected-test", handlers.GetAllMembersHandler, jwtMiddleware)

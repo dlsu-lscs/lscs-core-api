@@ -2,11 +2,15 @@
 
 The official *Authentication Microservice* of **La Salle Computer Society (LSCS)**
 
-## Usage
-
 This is an auth microservice, meant to be used by an application backend.
 
 _**Treat this as a service that simply returns a JSON payload, used only for authenticating LSCS Members and returning necessary data from them.**_
+
+## Usage
+
+> [!IMPORTANT]
+> 1. **only RND members can request an API key (associated with their DLSU email)** - to prevent unauthorized access
+> 2. **1 API key per DLSU email** - to prevent impersonation and duplicate API keys 
 
 
 ## Auth Endpoints
