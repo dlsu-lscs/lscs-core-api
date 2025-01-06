@@ -34,7 +34,7 @@ func registerAuthRoutes(r *chi.Mux) {
 	r.Get("/test", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("test test test"))
 	})
-	r.Post("/request-key", handlers.RequestAPIKey) // `/request_key?` TODO: change to POST if need condition before able to request, ex. need to be admin email only
+	r.Post("/request-key", handlers.RequestAPIKey) // needs email
 }
 
 func registerAdminRoutes() chi.Router {
