@@ -35,6 +35,7 @@ func registerAuthRoutes(r *chi.Mux) {
 		w.Write([]byte("test test test"))
 	})
 	r.Post("/request-key", handlers.RequestAPIKey) // needs email
+	r.Post("/revoke-key", handlers.RevokeAPIKey)   // needs email
 }
 
 func registerAdminRoutes() chi.Router {

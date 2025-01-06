@@ -46,6 +46,33 @@ func (q *Queries) GetAPIKeyInfo(ctx context.Context, apiKeyHash string) (ApiKey,
 	return i, err
 }
 
+const getAllAPIKeyHashes = `-- name: GetAllAPIKeyHashes :many
+SELECT api_key_hash FROM api_keys
+`
+
+func (q *Queries) GetAllAPIKeyHashes(ctx context.Context) ([]string, error) {
+	rows, err := q.db.QueryContext(ctx, getAllAPIKeyHashes)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []string
+	for rows.Next() {
+		var api_key_hash string
+		if err := rows.Scan(&api_key_hash); err != nil {
+			return nil, err
+		}
+		items = append(items, api_key_hash)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getAllCommittees = `-- name: GetAllCommittees :many
 SELECT committee_id, committee_name, committee_head, committee_division_id FROM committees
 `

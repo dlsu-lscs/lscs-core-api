@@ -62,9 +62,10 @@ func RequestAPIKey(w http.ResponseWriter, r *http.Request) {
 	hashedToken, rawToken, err := tokens.GenerateToken()
 	if err != nil {
 		http.Error(w, `"error": "Error generating refresh token"`, http.StatusInternalServerError)
-		slog.Error("Error generating hashed token", "error", err)
+		slog.Error("failed to generate token", "error", err)
 		return
 	}
+	slog.Info("generated token", "hashedToken", hashedToken, "rawToken", rawToken)
 
 	newAPIKey := repository.StoreAPIKeyParams{
 		MemberEmail: memEmail,

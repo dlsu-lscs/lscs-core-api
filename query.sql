@@ -35,3 +35,6 @@ SELECT * FROM api_keys WHERE api_key_hash = ?;
 
 -- name: DeleteAPIKey :exec
 DELETE FROM api_keys WHERE member_email = ?;
+
+-- name: GetAllAPIKeyHashes :many
+SELECT api_key_hash FROM api_keys;
