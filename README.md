@@ -9,8 +9,9 @@ _**Treat this as a service that simply returns a JSON payload, used only for aut
 ## Usage
 
 > [!IMPORTANT]
-> **only RND members can request an API key (associated with their DLSU email)** - to prevent unauthorized access
-> **only 1 API key per email** - this is not yet final
+> NOTE: **only RND members can request an API key (associated with their DLSU email)** - to prevent unauthorized access
+> 
+> --> All endpoints now requires an API key (in the `Authorization` request headers)
 
 
 ## Auth Endpoints
