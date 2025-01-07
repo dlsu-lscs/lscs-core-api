@@ -163,25 +163,28 @@ curl -X POST http://localhost:42069/check-email \
 - requires `Authorization: Bearer <API-KEY>` in the request headers
 - requires `id` in the request body
 
+> [!IMPORTANT]
+> **MAKE SURE to send the `id` as an int (in the request body)**
+
 - `request`:
 ```bash
 curl -X POST http://localhost:42069/check-id \
   -H "Authorization: Bearer <API-KEY>" \
   -H "Content-Type: application/json" \
-  -d '{"id": "12323004"}'
+  -d '{"id": 12323004}'
 ```
 
 - `response`:
 ```json
 { // success
-    "success": "ID is an LSCS member"
+    "id": 12323004,
     "state": "present",
-    "id": "12323004",
+    "success": "ID is an LSCS member"
 }
 
 { // fail
-    "error": "Not an LSCS member",
+    "id": 1231434214,
     "state": "absent"
-    "id": "1231434214",
+    "error": "Not an LSCS member",
 }
 ```

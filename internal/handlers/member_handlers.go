@@ -17,7 +17,7 @@ type EmailRequest struct {
 }
 
 type IdRequest struct {
-	Id int32 `json:"id" validate:"required"`
+	Id int `json:"id" validate:"required,id"`
 }
 
 func GetMemberInfo(w http.ResponseWriter, r *http.Request) {
@@ -27,6 +27,7 @@ func GetMemberInfo(w http.ResponseWriter, r *http.Request) {
 	q := repository.New(dbconn)
 
 	req := new(EmailRequest)
+
 	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
 		slog.Error("Failed to parse request body", "err", err)
 		http.Error(w, `"error": "Invalid request format"`, http.StatusBadRequest)
@@ -201,16 +202,17 @@ func GetAllCommitteesHandler(w http.ResponseWriter, r *http.Request) {
 // POST
 func CheckIDIfMember(w http.ResponseWriter, r *http.Request) {
 	var req IdRequest
+
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		http.Error(w, "invalid request body", http.StatusBadRequest)
-		slog.Error("invalid request body")
+		slog.Error("invalid request body", "error", err)
 		return
 	}
 
 	dbconn := database.Connect()
 	defer dbconn.Close()
 	q := repository.New(dbconn)
-	id, err := q.CheckIdIfMember(r.Context(), req.Id)
+	id, err := q.CheckIdIfMember(r.Context(), int32(req.Id))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			response := map[string]interface{}{
