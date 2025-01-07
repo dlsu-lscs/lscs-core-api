@@ -24,6 +24,9 @@ SELECT * FROM members ORDER BY email;
 -- name: CheckEmailIfMember :one
 SELECT email FROM members WHERE email = ?;
 
+-- name: CheckIdIfMember :one
+SELECT id FROM members WHERE id = ?;
+
 -- name: GetAllCommittees :many
 SELECT * FROM committees;
 

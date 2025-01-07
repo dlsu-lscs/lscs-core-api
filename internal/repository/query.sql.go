@@ -20,6 +20,16 @@ func (q *Queries) CheckEmailIfMember(ctx context.Context, email string) (string,
 	return email, err
 }
 
+const checkIdIfMember = `-- name: CheckIdIfMember :one
+SELECT id FROM members WHERE id = ?
+`
+
+func (q *Queries) CheckIdIfMember(ctx context.Context, id int32) (int32, error) {
+	row := q.db.QueryRowContext(ctx, checkIdIfMember, id)
+	err := row.Scan(&id)
+	return id, err
+}
+
 const deleteAPIKey = `-- name: DeleteAPIKey :exec
 DELETE FROM api_keys WHERE member_email = ? LIMIT 1
 `

@@ -16,6 +16,10 @@ type EmailRequest struct {
 	Email string `json:"email" validate:"required,email"`
 }
 
+type IdRequest struct {
+	Id int32 `json:"id" validate:"required"`
+}
+
 func GetMemberInfo(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	dbconn := database.Connect()
@@ -192,4 +196,47 @@ func GetAllCommitteesHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]interface{}{
 		"committees": committees,
 	})
+}
+
+// POST
+func CheckIDIfMember(w http.ResponseWriter, r *http.Request) {
+	var req IdRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, "invalid request body", http.StatusBadRequest)
+		slog.Error("invalid request body")
+		return
+	}
+
+	dbconn := database.Connect()
+	defer dbconn.Close()
+	q := repository.New(dbconn)
+	id, err := q.CheckIdIfMember(r.Context(), req.Id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			response := map[string]interface{}{
+				"success": "Not an LSCS member",
+				"state":   "absent",
+				"id":      id,
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusNotFound)
+			json.NewEncoder(w).Encode(response)
+			return
+		}
+		http.Error(w, "invalid ID", http.StatusNotFound)
+		slog.Error("invalid ID - Id doesn't exist - CheckIDIfMember")
+		return
+	}
+
+	response := map[string]interface{}{
+		"success": "Id is an LSCS member",
+		"state":   "present",
+		"id":      id,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("Failed to encode JSON response", "error", err)
+		http.Error(w, `{"error": "failed to encode response"}`, http.StatusInternalServerError)
+	}
 }
