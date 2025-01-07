@@ -229,7 +229,7 @@ func CheckIDIfMember(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := map[string]interface{}{
-		"success": "Id is an LSCS member",
+		"success": "ID is an LSCS member",
 		"state":   "present",
 		"id":      id,
 	}
