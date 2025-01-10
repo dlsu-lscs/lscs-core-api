@@ -100,6 +100,24 @@ curl -X GET http://localhost:42069/member \
 ]
 ```
 
+### GET `/committees`
+
+- returns all committees
+- requires `Authorization: Bearer <API-KEY>` in the request headers
+
+- `request`:
+```bash
+curl -X GET http://localhost:42069/committees \
+  -H "Authorization: Bearer <API-KEY>"
+```
+
+- `response`:
+```json
+{
+    "committees": [...]
+}
+```
+
 ### POST `/member`
 
 - returns `email`, `full_name`, `committee_name`, `position_name`, and `division_name` of the LSCS member 

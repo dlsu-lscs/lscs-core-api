@@ -41,6 +41,7 @@ func registerAdminRoutes() chi.Router {
 	r.Use(middlewares.AdminMiddleware)
 
 	r.Get("/members", handlers.GetAllMembersHandler)
+	r.Get("/committees", handlers.GetAllCommitteesHandler)
 	r.Post("/member", handlers.GetMemberInfo)
 	r.Post("/check-email", handlers.CheckEmailHandler)
 	r.Post("/check-id", handlers.CheckIDIfMember)
