@@ -147,6 +147,35 @@ curl -X POST http://localhost:42069/member \
 }
 ```
 
+### POST `/member-id`
+
+- returns `email`, `full_name`, `committee_name`, `position_name`, and `division_name` of the LSCS member 
+- requires `Authorization: Bearer <API-KEY>` in the request headers
+- requires `email` in the request body
+
+- `request`:
+```bash
+curl -X POST http://localhost:42069/member-id \
+  -H "Authorization: Bearer <API-KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{"id": "12323004"}'
+```
+
+- `response`:
+```json
+{ // success
+  "committee_name": "Research and Development",
+  "division_name": "Internals",
+  "email": "edwin_sadiarinjr@dlsu.edu.ph",
+  "full_name": "Edwin Sadiarin Jr.",
+  "position_name": "Committee Trainee"
+}
+
+{ // fail
+  "error": "Email is not an LSCS member"
+}
+```
+
 ### POST `/check-email`
 
 - checks if the email exists in database (indicating if it is an LSCS member or not)

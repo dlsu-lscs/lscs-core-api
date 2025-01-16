@@ -43,7 +43,7 @@ func registerAdminRoutes() chi.Router {
 	r.Get("/members", handlers.GetAllMembersHandler)
 	r.Get("/committees", handlers.GetAllCommitteesHandler)
 	r.Post("/member", handlers.GetMemberInfo)
-	r.Post("/member/{id}", handlers.GetMemberInfoById)
+	r.Post("/member-id", handlers.GetMemberInfoById)
 	r.Post("/check-email", handlers.CheckEmailHandler)
 	r.Post("/check-id", handlers.CheckIDIfMember)
 	return r

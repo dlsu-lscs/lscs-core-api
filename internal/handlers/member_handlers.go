@@ -7,6 +7,8 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"path"
+	"strconv"
 
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/repository"
@@ -118,8 +120,6 @@ func GetMemberInfoById(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `"error": "id is not an LSCS member"`, http.StatusInternalServerError)
 		return
 	}
-
-	fmt.Println(fmt.Sprint(memberInfo.ID))
 
 	response := map[string]string{
 		"id":             fmt.Sprint(memberInfo.ID),
