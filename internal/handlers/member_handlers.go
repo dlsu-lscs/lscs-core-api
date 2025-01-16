@@ -98,6 +98,46 @@ func toMemberResponse(m repository.Member) MemberResponse {
 	}
 }
 
+func GetMemberInfoById(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	dbconn := database.Connect()
+	defer dbconn.Close()
+	q := repository.New(dbconn)
+
+	req := new(IdRequest)
+
+	if err := json.NewDecoder(r.Body).Decode(req); err != nil {
+		slog.Error("Failed to parse request body", "err", err)
+		http.Error(w, `"error": "Invalid request format"`, http.StatusBadRequest)
+		return
+	}
+
+	memberInfo, err := q.GetMemberInfoById(ctx, int32(req.Id))
+	if err != nil {
+		slog.Error("id is not an LSCS member", "err", err)
+		http.Error(w, `"error": "id is not an LSCS member"`, http.StatusInternalServerError)
+		return
+	}
+
+	fmt.Println(fmt.Sprint(memberInfo.ID))
+
+	response := map[string]string{
+		"id":             fmt.Sprint(memberInfo.ID),
+		"email":          memberInfo.Email,
+		"full_name":      memberInfo.FullName,
+		"committee_name": memberInfo.CommitteeName,
+		"division_name":  memberInfo.DivisionName,
+		"position_name":  memberInfo.PositionName,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		slog.Error("Failed to encode JSON response", "error", err)
+		http.Error(w, `{"error": "failed to encode response"}`, http.StatusInternalServerError)
+	}
+}
+
 func GetAllMembersHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	dbconn := database.Connect()

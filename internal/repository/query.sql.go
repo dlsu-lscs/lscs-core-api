@@ -233,6 +233,38 @@ func (q *Queries) GetMemberInfo(ctx context.Context, email string) (GetMemberInf
 	return i, err
 }
 
+const getMemberInfoById = `-- name: GetMemberInfoById :one
+SELECT m.id, m.email, m.full_name, c.committee_name, d.division_name, p.position_name 
+FROM members m
+JOIN committees c ON m.committee_id = c.committee_id
+JOIN divisions d ON c.division_id = d.division_id
+JOIN positions p ON m.position_id = p.position_id
+WHERE m.id = ?
+`
+
+type GetMemberInfoByIdRow struct {
+	ID            int32
+	Email         string
+	FullName      string
+	CommitteeName string
+	DivisionName  string
+	PositionName  string
+}
+
+func (q *Queries) GetMemberInfoById(ctx context.Context, id int32) (GetMemberInfoByIdRow, error) {
+	row := q.db.QueryRowContext(ctx, getMemberInfoById, id)
+	var i GetMemberInfoByIdRow
+	err := row.Scan(
+		&i.ID,
+		&i.Email,
+		&i.FullName,
+		&i.CommitteeName,
+		&i.DivisionName,
+		&i.PositionName,
+	)
+	return i, err
+}
+
 const listMembers = `-- name: ListMembers :many
 SELECT id, full_name, nickname, email, telegram, position_id, committee_id, college, program, discord FROM members ORDER BY email
 `
