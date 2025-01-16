@@ -7,8 +7,6 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
-	"path"
-	"strconv"
 
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
 	"github.com/dlsu-lscs/lscs-central-auth-api/internal/repository"
