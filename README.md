@@ -24,7 +24,7 @@ _**Treat this as a service that simply returns a JSON payload, used only for aut
 
 - `request`:
 ```bash
-curl -X POST https://auth.app.dlsu-lscs.org/member \
+curl -X POST https://auth.app.dlsu-lscs.org/request-key \
   -H "Content-Type: application/json" \
   -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
 ```
@@ -44,7 +44,7 @@ curl -X POST https://auth.app.dlsu-lscs.org/member \
 
 - `request`:
 ```bash
-curl -X POST https://auth.app.dlsu-lscs.org/request-key \
+curl -X POST https://auth.app.dlsu-lscs.org/revoke-key \
   -H "Content-Type: application/json" \
   -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph", "pepper": "<CONTACT_ADMIN_DEVELOPER_TO_REVOKE_KEY>"}'
 ```
@@ -66,7 +66,7 @@ API key for <email> is successfully revoked
 
 - `request`:
 ```bash
-curl -X GET https://auth.app.dlsu-lscs.org/member \
+curl -X GET https://auth.app.dlsu-lscs.org/members \
   -H "Authorization: Bearer <API-KEY>"
 ```
 
