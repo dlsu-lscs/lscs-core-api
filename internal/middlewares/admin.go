@@ -22,13 +22,13 @@ func AdminMiddleware(next http.Handler) http.Handler {
 		bearer := r.Header.Get("Authorization")
 		if bearer == "" {
 			slog.Error("Authorization header missing")
-			http.Error(w, "Authorization header missing", http.StatusUnauthorized)
+			http.Error(w, "Authorization header missing", http.StatusBadRequest)
 			return
 		}
 		parts := strings.Split(bearer, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
 			slog.Error("Invalid Authorization header format")
-			http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+			http.Error(w, "Invalid Authorization header format", http.StatusBadRequest)
 			return
 		}
 		reqToken := strings.TrimSpace(parts[1])
@@ -39,7 +39,7 @@ func AdminMiddleware(next http.Handler) http.Handler {
 		isValid := tokens.CompareTokens(hash, reqToken)
 		if !isValid {
 			slog.Error("invalid API key")
-			http.Error(w, "Invalid API key", http.StatusNotFound)
+			http.Error(w, "Invalid API key", http.StatusUnauthorized)
 			return
 		}
 

@@ -115,7 +115,7 @@ func GetMemberInfoById(w http.ResponseWriter, r *http.Request) {
 	memberInfo, err := q.GetMemberInfoById(ctx, int32(req.Id))
 	if err != nil {
 		slog.Error("id is not an LSCS member", "err", err)
-		http.Error(w, `"error": "id is not an LSCS member"`, http.StatusInternalServerError)
+		http.Error(w, `"error": "id is not an LSCS member"`, http.StatusBadRequest)
 		return
 	}
 
