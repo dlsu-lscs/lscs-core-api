@@ -47,6 +47,8 @@ func GetMemberInfo(w http.ResponseWriter, r *http.Request) {
 		"committee_name": memberInfo.CommitteeName,
 		"division_name":  memberInfo.DivisionName,
 		"position_name":  memberInfo.PositionName,
+		"committee_id":   memberInfo.CommitteeID,
+		"division_id":    memberInfo.DivisionID,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -126,6 +128,8 @@ func GetMemberInfoById(w http.ResponseWriter, r *http.Request) {
 		"committee_name": memberInfo.CommitteeName,
 		"division_name":  memberInfo.DivisionName,
 		"position_name":  memberInfo.PositionName,
+		"committee_id":   memberInfo.CommitteeID,
+		"division_id":    memberInfo.DivisionID,
 	}
 
 	w.Header().Set("Content-Type", "application/json")

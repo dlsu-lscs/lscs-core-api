@@ -1,5 +1,5 @@
 -- name: GetMemberInfo :one
-SELECT m.email, m.full_name, c.committee_name, d.division_name, p.position_name 
+SELECT m.email, m.full_name, c.committee_name, d.division_name, p.position_name, c.committee_id, d.division_id 
 FROM members m
 JOIN committees c ON m.committee_id = c.committee_id
 JOIN divisions d ON c.division_id = d.division_id
@@ -7,7 +7,7 @@ JOIN positions p ON m.position_id = p.position_id
 WHERE m.email = ?;
 
 -- name: GetMemberInfoById :one
-SELECT m.id, m.email, m.full_name, c.committee_name, d.division_name, p.position_name 
+SELECT m.id, m.email, m.full_name, c.committee_name, d.division_name, p.position_name, c.committee_id, d.division_id  
 FROM members m
 JOIN committees c ON m.committee_id = c.committee_id
 JOIN divisions d ON c.division_id = d.division_id
