@@ -101,7 +101,7 @@ func (q *Queries) GetAllAPIKeyHashes(ctx context.Context) ([]string, error) {
 }
 
 const getAllCommittees = `-- name: GetAllCommittees :many
-SELECT committee_id, committee_name, committee_head, committee_division_id FROM committees
+SELECT committee_id, committee_name, committee_head, division_id FROM committees
 `
 
 func (q *Queries) GetAllCommittees(ctx context.Context) ([]Committee, error) {
@@ -117,7 +117,7 @@ func (q *Queries) GetAllCommittees(ctx context.Context) ([]Committee, error) {
 			&i.CommitteeID,
 			&i.CommitteeName,
 			&i.CommitteeHead,
-			&i.CommitteeDivisionID,
+			&i.DivisionID,
 		); err != nil {
 			return nil, err
 		}

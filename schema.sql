@@ -33,9 +33,9 @@ CREATE TABLE committees (
     committee_id VARCHAR(10) PRIMARY KEY, 
     committee_name VARCHAR(100) NOT NULL,
     committee_head INT,
-    committee_division_id VARCHAR(10),
+    division_id VARCHAR(10),
     CONSTRAINT fk_committee_head FOREIGN KEY (committee_head) REFERENCES members(id) ON DELETE SET NULL,
-    CONSTRAINT fk_committee_division FOREIGN KEY (committee_division_id) REFERENCES divisions(division_id) ON DELETE SET NULL
+    CONSTRAINT fk_committee_division FOREIGN KEY (division_id) REFERENCES divisions(division_id) ON DELETE SET NULL
 );
 
 -- Table: api_keys

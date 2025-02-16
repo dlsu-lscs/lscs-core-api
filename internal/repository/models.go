@@ -17,10 +17,10 @@ type ApiKey struct {
 }
 
 type Committee struct {
-	CommitteeID         string
-	CommitteeName       string
-	CommitteeHead       sql.NullInt32
-	CommitteeDivisionID sql.NullString
+	CommitteeID   string
+	CommitteeName string
+	CommitteeHead sql.NullInt32
+	DivisionID    sql.NullString
 }
 
 type Division struct {
