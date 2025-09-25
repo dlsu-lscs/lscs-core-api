@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
+	"github.com/dlsu-lscs/lscs-core-api/internal/database"
 )
 
 type Server struct {

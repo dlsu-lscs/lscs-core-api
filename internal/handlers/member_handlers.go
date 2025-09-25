@@ -8,8 +8,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/dlsu-lscs/lscs-central-auth-api/internal/database"
-	"github.com/dlsu-lscs/lscs-central-auth-api/internal/repository"
+	"github.com/dlsu-lscs/lscs-core-api/internal/database"
+	"github.com/dlsu-lscs/lscs-core-api/internal/repository"
 )
 
 type EmailRequest struct {

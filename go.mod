@@ -1,12 +1,14 @@
-module github.com/dlsu-lscs/lscs-central-auth-api
+module github.com/dlsu-lscs/lscs-core-api
 
 go 1.23.2
 
 require (
 	github.com/fatih/color v1.18.0
 	github.com/go-chi/chi/v5 v5.2.0
+	github.com/go-chi/cors v1.2.2
 	github.com/go-chi/httprate v0.14.1
 	github.com/go-sql-driver/mysql v1.8.1
+	github.com/golang-jwt/jwt/v5 v5.3.0
 	github.com/joho/godotenv v1.5.1
 )
 

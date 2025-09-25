@@ -7,7 +7,7 @@ import (
 	"github.com/fatih/color"
 	"github.com/joho/godotenv"
 
-	"github.com/dlsu-lscs/lscs-central-auth-api/internal/server"
+	"github.com/dlsu-lscs/lscs-core-api/internal/server"
 
 	_ "github.com/go-sql-driver/mysql"
 )

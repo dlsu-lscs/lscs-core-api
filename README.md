@@ -1,10 +1,8 @@
-# LSCS Central Auth API
+# LSCS Core API
 
-The official *Authentication Microservice* of **La Salle Computer Society (LSCS)**
+The official *Core API Microservice* of **La Salle Computer Society (LSCS)**
 
-This is an auth microservice, meant to be used by an application backend.
-
-_**Treat this as a service that simply returns a JSON payload, used only for authenticating LSCS Members and returning necessary data from them.**_
+This is a core microservice, meant to be used by an application backend or a frontend client for authenticating LSCS Members and returning necessary data from them.
 
 ## Usage
 

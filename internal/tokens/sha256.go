@@ -1,42 +1,33 @@
 package tokens
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"fmt"
-	"log/slog"
 	"os"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
-var PEPPER = os.Getenv("PEPPER")
+var ( // TODO: change this to something more secure
+	JWT_SECRET = []byte(os.Getenv("JWT_SECRET"))
+	PEPPER     = os.Getenv("PEPPER")
+)
 
-// Generates a new API token, hashes it, and returns both the hashed token and raw token, as well as the error if has any.
-func GenerateToken() (hashedToken string, rawToken string, err error) {
-	rawToken, err = generateRawToken()
+// Generates a new JWT token and returns it as a string, as well as the error if has any.
+func GenerateJWT(email string) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"email": email,
+		"exp":   time.Now().Add(time.Hour * 24 * 30).Unix(), // 30 days
+	})
+
+	tokenString, err := token.SignedString(JWT_SECRET)
 	if err != nil {
-		return "", "", err
+		return "", fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	hashedToken = HashRawToken(rawToken)
-	return hashedToken, rawToken, nil
-}
-
-// Compares a hashed token from the database with the raw token from the client.
-func CompareTokens(dbHashTok, reqTok string) bool {
-	return dbHashTok == HashRawToken(reqTok)
-}
-
-// Generates base64-encoded, 32-byte string as raw token.
-func generateRawToken() (string, error) {
-	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes); err != nil {
-		slog.Error("failed to generate raw token ", "error", err)
-		return "", fmt.Errorf("failed to generate raw token: %w", err)
-	}
-
-	return base64.RawURLEncoding.EncodeToString(bytes), nil
+	return tokenString, nil
 }
 
 // Hashes rawToken using bcrypt.

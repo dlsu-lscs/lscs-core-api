@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	// "github.com/dlsu-lscs/lscs-central-auth-api/internal/middlewares"
-	"github.com/dlsu-lscs/lscs-central-auth-api/internal/handlers"
-	"github.com/dlsu-lscs/lscs-central-auth-api/internal/middlewares"
+	"github.com/dlsu-lscs/lscs-core-api/internal/handlers"
+	"github.com/dlsu-lscs/lscs-core-api/internal/middlewares"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/httprate"
 )
 
@@ -18,33 +18,34 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.URLFormat)
 	r.Use(httprate.LimitByIP(100, time.Minute))
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"https://*", "http://*"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 
-	registerAuthRoutes(r)
-	r.Mount("/", registerAdminRoutes())
-	return r
-}
-
-/* Auth Routes */
-func registerAuthRoutes(r *chi.Mux) {
+	// Public routes
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("it works"))
 	})
-	r.Post("/request-key", handlers.RequestAPIKey) // needs email
-	r.Post("/revoke-key", handlers.RevokeAPIKey)   // needs email
-}
+	r.Post("/auth/google/callback", handlers.GoogleLoginHandler)
 
-func registerAdminRoutes() chi.Router {
-	/* Protected Routes */
-	r := chi.NewRouter()
-	r.Use(middlewares.AdminMiddleware)
+	// Protected routes
+	r.Group(func(r chi.Router) {
+		r.Use(middlewares.JwtAuthentication)
 
-	r.Get("/members", handlers.GetAllMembersHandler)
-	r.Get("/committees", handlers.GetAllCommitteesHandler)
-	r.Post("/member", handlers.GetMemberInfo)
-	r.Post("/member-id", handlers.GetMemberInfoById)
-	r.Post("/check-email", handlers.CheckEmailHandler)
-	r.Post("/check-id", handlers.CheckIDIfMember)
+		r.Get("/members", handlers.GetAllMembersHandler)
+		r.Get("/committees", handlers.GetAllCommitteesHandler)
+		r.Post("/member", handlers.GetMemberInfo)
+		r.Post("/member-id", handlers.GetMemberInfoById)
+		r.Post("/check-email", handlers.CheckEmailHandler)
+		r.Post("/check-id", handlers.CheckIDIfMember)
+	})
+
 	return r
 }
+
