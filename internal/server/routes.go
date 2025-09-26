@@ -32,7 +32,7 @@ func (s *Server) RegisterRoutes() http.Handler {
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("it works"))
 	})
-	r.Post("/auth/google/callback", handlers.GoogleLoginHandler)
+	r.Post("/request-key", handlers.RequestKeyHandler)
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
@@ -48,4 +48,3 @@ func (s *Server) RegisterRoutes() http.Handler {
 
 	return r
 }
-

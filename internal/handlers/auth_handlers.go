@@ -11,7 +11,7 @@ import (
 	"github.com/dlsu-lscs/lscs-core-api/internal/tokens"
 )
 
-func GoogleLoginHandler(w http.ResponseWriter, r *http.Request) {
+func RequestKeyHandler(w http.ResponseWriter, r *http.Request) {
 	dbconn := database.Connect()
 	defer dbconn.Close()
 	q := repository.New(dbconn)
@@ -60,4 +60,3 @@ func GoogleLoginHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(response)
 }
-
