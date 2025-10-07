@@ -55,12 +55,23 @@ func (h *Handler) RequestKeyHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Internal server error"})
 	}
 
+	// only allow RND members and those that are AVPs and above
 	if helpers.NullStringToString(memberInfo.CommitteeName) != "Research and Development" {
 		return c.JSON(http.StatusForbidden, map[string]string{"error": "User is not a member of Research and Development"})
 	}
 
-	if helpers.NullStringToString(memberInfo.PositionName) != "Research and Development" {
-		return c.JSON(http.StatusForbidden, map[string]string{"error": "User is not a member of Research and Development"})
+	allowedPositions := map[string]bool{
+		"PRES": true,
+		"EVP":  true,
+		"VP":   true,
+		"AVP":  true,
+		"CT":   false,
+		"JO":   false,
+		"MEM":  false,
+	}
+	pos := helpers.NullStringToString(memberInfo.PositionID)
+	if !allowedPositions[pos] {
+		return c.JSON(http.StatusForbidden, map[string]string{"error": "User must be AVP or higher"})
 	}
 
 	// Generate JWT

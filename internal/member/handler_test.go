@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/dlsu-lscs/lscs-core-api/internal/database"
 	"github.com/stretchr/testify/assert"
 	"github.com/labstack/echo/v4"
 )
