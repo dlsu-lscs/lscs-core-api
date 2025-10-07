@@ -5,7 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/dlsu-lscs/lscs-core-api/internal/helpers"
 	"github.com/dlsu-lscs/lscs-core-api/internal/repository"
 	"github.com/labstack/echo/v4"
 )
@@ -28,26 +27,7 @@ func (h *Handler) GetMemberInfo(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Email is not an LSCS member"})
 	}
 
-	response := map[string]any{
-		"id":             memberInfo.ID,
-		"email":          memberInfo.Email,
-		"full_name":      memberInfo.FullName,
-		"nickname":       helpers.NullStringToString(memberInfo.Nickname),
-		"committee_id":   helpers.NullStringToString(memberInfo.CommitteeID),
-		"committee_name": helpers.NullStringToString(memberInfo.CommitteeName),
-		"division_id":    helpers.NullStringToString(memberInfo.DivisionID),
-		"division_name":  helpers.NullStringToString(memberInfo.DivisionName),
-		"position_id":    helpers.NullStringToString(memberInfo.PositionID),
-		"position_name":  helpers.NullStringToString(memberInfo.PositionName),
-		"house_name":     helpers.NullStringToString(memberInfo.HouseName),
-		"contact_number": helpers.NullStringToString(memberInfo.ContactNumber),
-		"college":        helpers.NullStringToString(memberInfo.College),
-		"program":        helpers.NullStringToString(memberInfo.Program),
-		"interests":      helpers.NullStringToString(memberInfo.Interests),
-		"discord":        helpers.NullStringToString(memberInfo.Discord),
-		"fb_link":        helpers.NullStringToString(memberInfo.FbLink),
-		"telegram":       helpers.NullStringToString(memberInfo.Telegram),
-	}
+	response := toFullInfoMemberResponse(memberInfo)
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -70,26 +50,7 @@ func (h *Handler) GetMemberInfoByID(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "id is not an LSCS member"})
 	}
 
-	response := map[string]any{
-		"id":             memberInfo.ID,
-		"email":          memberInfo.Email,
-		"full_name":      memberInfo.FullName,
-		"nickname":       helpers.NullStringToString(memberInfo.Nickname),
-		"committee_id":   helpers.NullStringToString(memberInfo.CommitteeID),
-		"committee_name": helpers.NullStringToString(memberInfo.CommitteeName),
-		"division_id":    helpers.NullStringToString(memberInfo.DivisionID),
-		"division_name":  helpers.NullStringToString(memberInfo.DivisionName),
-		"position_id":    helpers.NullStringToString(memberInfo.PositionID),
-		"position_name":  helpers.NullStringToString(memberInfo.PositionName),
-		"house_name":     helpers.NullStringToString(memberInfo.HouseName),
-		"contact_number": helpers.NullStringToString(memberInfo.ContactNumber),
-		"college":        helpers.NullStringToString(memberInfo.College),
-		"program":        helpers.NullStringToString(memberInfo.Program),
-		"interests":      helpers.NullStringToString(memberInfo.Interests),
-		"discord":        helpers.NullStringToString(memberInfo.Discord),
-		"fb_link":        helpers.NullStringToString(memberInfo.FbLink),
-		"telegram":       helpers.NullStringToString(memberInfo.Telegram),
-	}
+	response := toFullInfoMemberResponse(repository.GetMemberInfoRow(memberInfo))
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -155,7 +116,7 @@ func (h *Handler) CheckIDIfMember(c echo.Context) error {
 	var req IdRequest
 
 	if err := c.Bind(&req); err != nil {
-		slog.Error("invalid request body", "error", err)
+		slog.Error("invalid request body")
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request body"})
 	}
 
@@ -182,4 +143,3 @@ func (h *Handler) CheckIDIfMember(c echo.Context) error {
 	}
 	return c.JSON(http.StatusOK, response)
 }
-
