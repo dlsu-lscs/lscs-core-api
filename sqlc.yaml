@@ -1,7 +1,7 @@
 version: "2"
 sql:
   - engine: "mysql"
-    queries: "query.sql"
+    queries: ["query.sql"]
     schema: "schema.sql"
     gen:
       go:
