@@ -116,7 +116,7 @@ curl -X GET https://core.api.dlsu-lscs.org/committees \
 - `response`:
 ```json
 {
-    "committees": [...]
+    "committees": [...] 
 }
 ```
 
@@ -243,3 +243,25 @@ curl -X POST https://core.api.dlsu-lscs.org/check-id \
     "error": "Not an LSCS member",
 }
 ```
+
+## Contributing
+
+### (for Maintainers & Admins) Creating a Release
+
+To create a new release, you need to push a new tag to the repository. The tag must follow the semantic versioning format (e.g., `v1.2.3`).
+
+1.  **Create a new tag:**
+    ```bash
+    git tag v1.2.4
+    ```
+
+2.  **Push the tag to the repository:**
+    ```bash
+    git push origin v1.2.4
+    ```
+
+Pushing a new tag will trigger the `release` workflow, which will automatically:
+- Build the binaries for different operating systems.
+- Create a new release on GitHub.
+- Upload the binaries as release assets.
+- Include a link to the corresponding Docker image in the release notes.

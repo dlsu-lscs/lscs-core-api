@@ -1,30 +1,34 @@
+---
 version: 2
 before:
   hooks:
-  - go mod tidy
+    - go mod tidy
 
 env:
   - PACKAGE_PATH=github.com/dlsu-lscs/lscs-core-api/cmd
 
 builds:
-- binary: "{{ .ProjectName }}"
-  main: ./cmd/api
-  goos:
-  - darwin
-  - linux
-  - windows
-  goarch:
-  - amd64
-  - arm64
-  env:
-  - CGO_ENABLED=0
-  ldflags:
-  - -s -w -X {{.Env.PACKAGE_PATH}}={{.Version}} 
+  - binary: "{{ .ProjectName }}"
+    main: ./cmd/api
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X {{.Env.PACKAGE_PATH}}={{.Version}}
 release:
   prerelease: auto
+  footer: |
+    ## Docker Image
+    `ghcr.io/dlsu-lscs/lscs-core-api:{{ .ShortCommit }}`
 
 universal_binaries:
-- replace: true
+  - replace: true
 
 archives:
   - name_template: >
@@ -40,3 +44,4 @@ archives:
 
 checksum:
   name_template: 'checksums.txt'
+
