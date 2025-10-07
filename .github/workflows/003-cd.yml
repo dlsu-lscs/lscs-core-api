@@ -2,8 +2,13 @@
 name: CD
 
 on:
-  release:
-    types: [published]
+  # release:
+  #   types: [published]
+  workflow_run:
+    workflows:
+      - goreleaser
+    types:
+      - completed
   # push:
   #   branches:
   #     - main
