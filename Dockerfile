@@ -1,17 +1,16 @@
-FROM golang:1.23.2 as build
+FROM golang:1.24.4-alpine AS build
 
 WORKDIR /app
 
-COPY . .
-
+COPY go.mod go.sum ./
 RUN go mod download
 
-RUN CGO_ENABLED=0 go build -o /bin/lscs-central-auth ./cmd/api/main.go
+COPY . .
 
-FROM gcr.io/distroless/static-debian12
+RUN go build -o main cmd/api/main.go
 
-COPY --from=build /bin/lscs-central-auth /bin/
-
-EXPOSE 42069
-
-CMD ["/bin/lscs-central-auth"]
+FROM alpine:3.20.1 AS prod
+WORKDIR /app
+COPY --from=build /app/main /app/main
+EXPOSE ${PORT}
+CMD ["./main"]

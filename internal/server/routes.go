@@ -2,49 +2,44 @@ package server
 
 import (
 	"net/http"
-	"time"
+	"os"
 
-	"github.com/dlsu-lscs/lscs-core-api/internal/handlers"
-	"github.com/dlsu-lscs/lscs-core-api/internal/middlewares"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/cors"
-	"github.com/go-chi/httprate"
+	"github.com/dlsu-lscs/lscs-core-api/internal/auth"
+	"github.com/golang-jwt/jwt/v5"
+	echojwt "github.com/labstack/echo-jwt/v4"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
-func (s *Server) RegisterRoutes() http.Handler {
-	r := chi.NewRouter()
+func (s *Server) RegisterRoutes(e *echo.Echo) {
 
-	r.Use(middleware.RequestID)
-	r.Use(middleware.Logger)
-	r.Use(middleware.Recoverer)
-	r.Use(httprate.LimitByIP(100, time.Minute))
-	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"https://*", "http://*"},
-		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
-		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true,
-		MaxAge:           300,
+	e.Use(middleware.Logger())
+	e.Use(middleware.Recover())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{"https://*", "http://*"},
+		AllowMethods: []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete, http.MethodOptions},
+		AllowHeaders: []string{echo.HeaderOrigin, echo.HeaderContentLength, echo.HeaderAcceptEncoding, echo.HeaderContentType, echo.HeaderAuthorization},
 	}))
 
 	// Public routes
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("it works"))
+	e.GET("/", func(c echo.Context) error {
+		return c.String(http.StatusOK, "it works")
 	})
-	r.Post("/request-key", handlers.RequestKeyHandler)
+	e.POST("/request-key", s.authHandler.RequestKeyHandler)
 
-	// Protected routes
-	r.Group(func(r chi.Router) {
-		r.Use(middlewares.JwtAuthentication)
+	// --- Protected routes ----
+	protected := e.Group("")
+	protected.Use(echojwt.WithConfig(echojwt.Config{
+		NewClaimsFunc: func(c echo.Context) jwt.Claims { return new(auth.JwtCustomClaims) },
+		SigningKey:    []byte(os.Getenv("JWT_SECRET")),
+		TokenLookup:   "header:Authorization:Bearer ",
+		SigningMethod: "HS256",
+	}))
 
-		r.Get("/members", handlers.GetAllMembersHandler)
-		r.Get("/committees", handlers.GetAllCommitteesHandler)
-		r.Post("/member", handlers.GetMemberInfo)
-		r.Post("/member-id", handlers.GetMemberInfoById)
-		r.Post("/check-email", handlers.CheckEmailHandler)
-		r.Post("/check-id", handlers.CheckIDIfMember)
-	})
-
-	return r
+	protected.GET("/members", s.memberHandler.GetAllMembersHandler)
+	protected.GET("/committees", s.committeeHandler.GetAllCommitteesHandler)
+	protected.POST("/member", s.memberHandler.GetMemberInfo)
+	protected.POST("/member-id", s.memberHandler.GetMemberInfoByID)
+	protected.POST("check-email", s.memberHandler.CheckEmailHandler)
+	protected.POST("check-id", s.memberHandler.CheckIDIfMember)
 }

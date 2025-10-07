@@ -14,7 +14,7 @@ This is a core microservice, meant to be used by an application backend or a fro
 
 ## Auth Endpoints
 
-- `[UPDATE 20250107-04:49AM]`: **no longer needs to login to Google**
+- `[UPDATE 20251007]`: **no longer needs to login to Google**
 
 ### POST `/request-key`
 
@@ -22,16 +22,20 @@ This is a core microservice, meant to be used by an application backend or a fro
 
 - `request`:
 ```bash
-curl -X POST https://auth.app.dlsu-lscs.org/request-key \
+curl -X POST https://core.api.dlsu-lscs.org/request-key \
   -H "Content-Type: application/json" \
   -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
 ```
 
 - `response`:
 ```json
-{
+{ // success
     "api_key": "somethingsomethingstringssdgasdfkgjdsf",
     "email": "edwin_sadiarinjr@dlsu.edu.ph"
+}
+
+{ // fail
+  "error": "User is not a member of Research and Development"
 }
 ```
 
@@ -42,7 +46,7 @@ curl -X POST https://auth.app.dlsu-lscs.org/request-key \
 
 - `request`:
 ```bash
-curl -X POST https://auth.app.dlsu-lscs.org/revoke-key \
+curl -X POST https://core.api.dlsu-lscs.org/revoke-key \
   -H "Content-Type: application/json" \
   -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph", "pepper": "<CONTACT_ADMIN_DEVELOPER_TO_REVOKE_KEY>"}'
 ```
@@ -64,7 +68,7 @@ API key for <email> is successfully revoked
 
 - `request`:
 ```bash
-curl -X GET https://auth.app.dlsu-lscs.org/members \
+curl -X GET https://core.api.dlsu-lscs.org/members \
   -H "Authorization: Bearer <API-KEY>"
 ```
 
@@ -105,7 +109,7 @@ curl -X GET https://auth.app.dlsu-lscs.org/members \
 
 - `request`:
 ```bash
-curl -X GET https://auth.app.dlsu-lscs.org/committees \
+curl -X GET https://core.api.dlsu-lscs.org/committees \
   -H "Authorization: Bearer <API-KEY>"
 ```
 
@@ -118,13 +122,13 @@ curl -X GET https://auth.app.dlsu-lscs.org/committees \
 
 ### POST `/member`
 
-- returns `email`, `full_name`, `committee_name`, `position_name`, and `division_name` of the LSCS member 
+- returns `email`, `full_name`, `committee_name`, `position_name`, `division_name`, `committee_id`, and `division_id` of the LSCS member 
 - requires `Authorization: Bearer <API-KEY>` in the request headers
 - requires `email` in the request body
 
 - `request`:
 ```bash
-curl -X POST https://auth.app.dlsu-lscs.org/member \
+curl -X POST https://core.api.dlsu-lscs.org/member \
   -H "Authorization: Bearer <API-KEY>" \
   -H "Content-Type: application/json" \
   -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
@@ -133,7 +137,9 @@ curl -X POST https://auth.app.dlsu-lscs.org/member \
 - `response`:
 ```json
 { // success
+  "committee_id": "RND",
   "committee_name": "Research and Development",
+  "division_id": "INT",
   "division_name": "Internals",
   "email": "edwin_sadiarinjr@dlsu.edu.ph",
   "full_name": "Edwin Sadiarin Jr.",
@@ -147,13 +153,13 @@ curl -X POST https://auth.app.dlsu-lscs.org/member \
 
 ### POST `/member-id`
 
-- returns `id`, `email`, `full_name`, `committee_name`, `position_name`, and `division_name` of the LSCS member 
+- returns `id`, `email`, `full_name`, `committee_name`, `position_name`, `division_name`, `committee_id`, and `division_id` of the LSCS member 
 - requires `Authorization: Bearer <API-KEY>` in the request headers
-- requires `email` in the request body
+- requires `id` in the request body
 
 - `request`:
 ```bash
-curl -X POST https://auth.app.dlsu-lscs.org/member-id \
+curl -X POST https://core.api.dlsu-lscs.org/member-id \
   -H "Authorization: Bearer <API-KEY>" \
   -H "Content-Type: application/json" \
   -d '{"id": 12323004}'
@@ -163,7 +169,9 @@ curl -X POST https://auth.app.dlsu-lscs.org/member-id \
 ```json
 { // success
   "id": 12323004,
+  "committee_id": "RND",
   "committee_name": "Research and Development",
+  "division_id": "INT",
   "division_name": "Internals",
   "email": "edwin_sadiarinjr@dlsu.edu.ph",
   "full_name": "Edwin Sadiarin Jr.",
@@ -171,7 +179,7 @@ curl -X POST https://auth.app.dlsu-lscs.org/member-id \
 }
 
 { // fail
-  "error": "Email is not an LSCS member"
+  "error": "ID is not an LSCS member"
 }
 ```
 
@@ -183,7 +191,7 @@ curl -X POST https://auth.app.dlsu-lscs.org/member-id \
 
 - `request`:
 ```bash
-curl -X POST https://auth.app.dlsu-lscs.org/check-email \
+curl -X POST https://core.api.dlsu-lscs.org/check-email \
   -H "Authorization: Bearer <API-KEY>" \
   -H "Content-Type: application/json" \
   -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
@@ -215,7 +223,7 @@ curl -X POST https://auth.app.dlsu-lscs.org/check-email \
 
 - `request`:
 ```bash
-curl -X POST https://auth.app.dlsu-lscs.org/check-id \
+curl -X POST https://core.api.dlsu-lscs.org/check-id \
   -H "Authorization: Bearer <API-KEY>" \
   -H "Content-Type: application/json" \
   -d '{"id": 12323004}'
