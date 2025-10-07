@@ -7,7 +7,6 @@ on:
       - "Test"
     branches:
       - main
-      - dev
     types:
       - completed
   workflow_dispatch:
