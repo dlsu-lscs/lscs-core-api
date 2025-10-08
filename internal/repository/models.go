@@ -56,11 +56,15 @@ func (ns NullFileStatusesStatus) Value() (driver.Value, error) {
 }
 
 type ApiKey struct {
-	ApiKeyID    int32
-	MemberEmail string
-	ApiKeyHash  string
-	CreatedAt   sql.NullTime
-	ExpiresAt   sql.NullTime
+	ApiKeyID      int32
+	MemberEmail   string
+	ApiKeyHash    string
+	Project       string
+	AllowedOrigin sql.NullString
+	IsDev         bool
+	IsAdmin       bool
+	CreatedAt     sql.NullTime
+	ExpiresAt     sql.NullTime
 }
 
 type Committee struct {

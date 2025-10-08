@@ -10,6 +10,17 @@ import (
 	"database/sql"
 )
 
+const checkAllowedOriginExists = `-- name: CheckAllowedOriginExists :one
+SELECT EXISTS(SELECT 1 FROM api_keys WHERE allowed_origin = ? AND is_dev = false)
+`
+
+func (q *Queries) CheckAllowedOriginExists(ctx context.Context, allowedOrigin sql.NullString) (bool, error) {
+	row := q.db.QueryRowContext(ctx, checkAllowedOriginExists, allowedOrigin)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const checkEmailIfMember = `-- name: CheckEmailIfMember :one
 SELECT email FROM members WHERE email = ?
 `
@@ -40,7 +51,7 @@ func (q *Queries) DeleteAPIKey(ctx context.Context, memberEmail string) error {
 }
 
 const getAPIKeyInfo = `-- name: GetAPIKeyInfo :one
-SELECT api_key_id, member_email, api_key_hash, created_at, expires_at FROM api_keys WHERE api_key_hash = ?
+SELECT api_key_id, member_email, api_key_hash, project, allowed_origin, is_dev, is_admin, created_at, expires_at FROM api_keys WHERE api_key_hash = ?
 `
 
 func (q *Queries) GetAPIKeyInfo(ctx context.Context, apiKeyHash string) (ApiKey, error) {
@@ -50,6 +61,10 @@ func (q *Queries) GetAPIKeyInfo(ctx context.Context, apiKeyHash string) (ApiKey,
 		&i.ApiKeyID,
 		&i.MemberEmail,
 		&i.ApiKeyHash,
+		&i.Project,
+		&i.AllowedOrigin,
+		&i.IsDev,
+		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.ExpiresAt,
 	)
@@ -57,7 +72,7 @@ func (q *Queries) GetAPIKeyInfo(ctx context.Context, apiKeyHash string) (ApiKey,
 }
 
 const getAPIKeyInfoWithEmail = `-- name: GetAPIKeyInfoWithEmail :one
-SELECT api_key_id, member_email, api_key_hash, created_at, expires_at FROM api_keys WHERE member_email = ?
+SELECT api_key_id, member_email, api_key_hash, project, allowed_origin, is_dev, is_admin, created_at, expires_at FROM api_keys WHERE member_email = ?
 `
 
 func (q *Queries) GetAPIKeyInfoWithEmail(ctx context.Context, memberEmail string) (ApiKey, error) {
@@ -67,6 +82,10 @@ func (q *Queries) GetAPIKeyInfoWithEmail(ctx context.Context, memberEmail string
 		&i.ApiKeyID,
 		&i.MemberEmail,
 		&i.ApiKeyHash,
+		&i.Project,
+		&i.AllowedOrigin,
+		&i.IsDev,
+		&i.IsAdmin,
 		&i.CreatedAt,
 		&i.ExpiresAt,
 	)
@@ -391,16 +410,38 @@ func (q *Queries) ListMembers(ctx context.Context) ([]ListMembersRow, error) {
 }
 
 const storeAPIKey = `-- name: StoreAPIKey :exec
-INSERT INTO api_keys (member_email, api_key_hash, expires_at) VALUES (?, ?, ?)
+INSERT INTO api_keys (
+    member_email,
+    api_key_hash,
+    project,
+    allowed_origin,
+    is_dev,
+    is_admin,
+    expires_at
+) VALUES (
+    ?, ?, ?, ?, ?, ?, ?
+)
 `
 
 type StoreAPIKeyParams struct {
-	MemberEmail string
-	ApiKeyHash  string
-	ExpiresAt   sql.NullTime
+	MemberEmail   string
+	ApiKeyHash    string
+	Project       string
+	AllowedOrigin sql.NullString
+	IsDev         bool
+	IsAdmin       bool
+	ExpiresAt     sql.NullTime
 }
 
 func (q *Queries) StoreAPIKey(ctx context.Context, arg StoreAPIKeyParams) error {
-	_, err := q.db.ExecContext(ctx, storeAPIKey, arg.MemberEmail, arg.ApiKeyHash, arg.ExpiresAt)
+	_, err := q.db.ExecContext(ctx, storeAPIKey,
+		arg.MemberEmail,
+		arg.ApiKeyHash,
+		arg.Project,
+		arg.AllowedOrigin,
+		arg.IsDev,
+		arg.IsAdmin,
+		arg.ExpiresAt,
+	)
 	return err
 }

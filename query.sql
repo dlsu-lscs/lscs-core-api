@@ -63,10 +63,20 @@ SELECT c.committee_id, c.committee_name, c.committee_head, c.division_id FROM co
 SELECT d.division_id, d.division_name, d.division_head FROM divisions d;
 
 -- name: StoreAPIKey :exec
-INSERT INTO api_keys (member_email, api_key_hash, expires_at) VALUES (?, ?, ?);
+INSERT INTO api_keys (
+    member_email,
+    api_key_hash,
+    project,
+    allowed_origin,
+    is_dev,
+    is_admin,
+    expires_at
+) VALUES (
+    ?, ?, ?, ?, ?, ?, ?
+);
 
 -- name: GetAPIKeyInfo :one
-SELECT * FROM api_keys WHERE api_key_hash = ?;
+SELECT api_key_id, member_email, api_key_hash, project, allowed_origin, is_dev, is_admin, created_at, expires_at FROM api_keys WHERE api_key_hash = ?;
 
 -- name: DeleteAPIKey :exec
 DELETE FROM api_keys WHERE member_email = ? LIMIT 1;
@@ -75,7 +85,10 @@ DELETE FROM api_keys WHERE member_email = ? LIMIT 1;
 SELECT api_key_hash FROM api_keys;
 
 -- name: GetAPIKeyInfoWithEmail :one
-SELECT * FROM api_keys WHERE member_email = ?;
+SELECT api_key_id, member_email, api_key_hash, project, allowed_origin, is_dev, is_admin, created_at, expires_at FROM api_keys WHERE member_email = ?;
 
 -- name: GetEmailsInAPIKey :many
 SELECT member_email FROM api_keys;
+
+-- name: CheckAllowedOriginExists :one
+SELECT EXISTS(SELECT 1 FROM api_keys WHERE allowed_origin = ? AND is_dev = false);

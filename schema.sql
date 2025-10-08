@@ -125,6 +125,10 @@ CREATE TABLE api_keys (
     api_key_id INT AUTO_INCREMENT PRIMARY KEY,
     member_email VARCHAR(100) NOT NULL,
     api_key_hash VARCHAR(255) NOT NULL,
+    project VARCHAR(255) NOT NULL,
+    allowed_origin VARCHAR(255) UNIQUE,
+    is_dev BOOLEAN NOT NULL DEFAULT FALSE,
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     expires_at TIMESTAMP,
     FOREIGN KEY (member_email) REFERENCES members(email) ON DELETE CASCADE

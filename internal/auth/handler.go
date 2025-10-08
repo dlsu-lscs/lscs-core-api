@@ -4,8 +4,11 @@ import (
 	"crypto/sha256"
 	"database/sql"
 	"encoding/hex"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/dlsu-lscs/lscs-core-api/internal/database"
 	"github.com/dlsu-lscs/lscs-core-api/internal/helpers"
@@ -13,8 +16,12 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-type EmailRequest struct {
-	Email string `json:"email" validate:"required,email"`
+type RequestKeyRequest struct {
+	Email         string `json:"email" validate:"required,email"`
+	Project       string `json:"project" validate:"required"`
+	AllowedOrigin string `json:"allowed_origin"`
+	IsDev         bool   `json:"is_dev"`
+	IsAdmin       bool   `json:"is_admin"`
 }
 
 type Handler struct {
@@ -32,16 +39,17 @@ func NewHandler(authService Service, dbService database.Service) *Handler {
 func (h *Handler) RequestKeyHandler(c echo.Context) error {
 	dbconn := h.dbService.GetConnection()
 	q := repository.New(dbconn)
+	ctx := c.Request().Context()
 
 	// Parse body
-	var req EmailRequest
+	var req RequestKeyRequest
 	if err := c.Bind(&req); err != nil {
 		slog.Error("cannot read body", "error", err)
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "cannot read body"})
 	}
 
 	// Check if user is an LSCS member and in RND
-	memberInfo, err := q.GetMemberInfo(c.Request().Context(), req.Email)
+	memberInfo, err := q.GetMemberInfo(ctx, req.Email)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			response := map[string]string{
@@ -74,6 +82,44 @@ func (h *Handler) RequestKeyHandler(c echo.Context) error {
 		return c.JSON(http.StatusForbidden, map[string]string{"error": "User must be AVP or higher"})
 	}
 
+	var allowedOriginForDB sql.NullString
+	var isDevForDB bool
+
+	if req.IsAdmin {
+		allowedOriginForDB = sql.NullString{Valid: false}
+		isDevForDB = false
+	} else if req.IsDev {
+		if !strings.HasPrefix(req.AllowedOrigin, "http://localhost") {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "For dev keys, allowed_origin must start with http://localhost"})
+		}
+		allowedOriginForDB = sql.NullString{Valid: false}
+		isDevForDB = true
+	} else {
+		// Production key
+		if req.AllowedOrigin == "" {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "allowed_origin is required for production keys"})
+		}
+		_, err := url.ParseRequestURI(req.AllowedOrigin)
+		if err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid URL for allowed_origin"})
+		}
+		if strings.HasPrefix(req.AllowedOrigin, "http://localhost") {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "localhost is not a valid origin for production keys"})
+		}
+
+		exists, err := q.CheckAllowedOriginExists(ctx, req.AllowedOrigin)
+		if err != nil {
+			slog.Error("failed to check allowed origin", "error", err)
+			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Error checking origin"})
+		}
+		if exists {
+			return c.JSON(http.StatusConflict, map[string]string{"error": fmt.Sprintf("API key for origin %s already exists", req.AllowedOrigin)})
+		}
+
+		allowedOriginForDB = sql.NullString{String: req.AllowedOrigin, Valid: true}
+		isDevForDB = false
+	}
+
 	// Generate JWT
 	tokenString, err := h.authService.GenerateJWT(memberInfo.Email)
 	if err != nil {
@@ -86,13 +132,17 @@ func (h *Handler) RequestKeyHandler(c echo.Context) error {
 	hashStr := hex.EncodeToString(hash[:])
 
 	// Store API key
-	params := repository.CreateAPIKeyParams{
-		MemberEmail: memberInfo.Email,
-		ApiKeyHash:  hashStr,
-		ExpiresAt:   sql.NullTime{Valid: false},
+	params := repository.StoreAPIKeyParams{
+		MemberEmail:   memberInfo.Email,
+		ApiKeyHash:    hashStr,
+		Project:       req.Project,
+		AllowedOrigin: allowedOriginForDB,
+		IsDev:         isDevForDB,
+		IsAdmin:       req.IsAdmin,
+		ExpiresAt:     sql.NullTime{Valid: false},
 	}
 
-	_, err = q.CreateAPIKey(c.Request().Context(), params)
+	err = q.StoreAPIKey(ctx, params)
 	if err != nil {
 		slog.Error("failed to store api key", "error", err)
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Error storing API key"})
