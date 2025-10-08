@@ -17,7 +17,6 @@ import (
 )
 
 type RequestKeyRequest struct {
-	Email         string `json:"email" validate:"required,email"`
 	Project       string `json:"project" validate:"required"`
 	AllowedOrigin string `json:"allowed_origin"`
 	IsDev         bool   `json:"is_dev"`
@@ -41,6 +40,9 @@ func (h *Handler) RequestKeyHandler(c echo.Context) error {
 	q := repository.New(dbconn)
 	ctx := c.Request().Context()
 
+	// Get email from context
+	email := c.Get("user_email").(string)
+
 	// Parse body
 	var req RequestKeyRequest
 	if err := c.Bind(&req); err != nil {
@@ -49,13 +51,13 @@ func (h *Handler) RequestKeyHandler(c echo.Context) error {
 	}
 
 	// Check if user is an LSCS member and in RND
-	memberInfo, err := q.GetMemberInfo(ctx, req.Email)
+	memberInfo, err := q.GetMemberInfo(ctx, email)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			response := map[string]string{
 				"error": "Not an LSCS member",
 				"state": "absent",
-				"email": req.Email,
+				"email": email,
 			}
 			return c.JSON(http.StatusNotFound, response)
 		}
