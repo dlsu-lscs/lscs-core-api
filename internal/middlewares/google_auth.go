@@ -11,6 +11,7 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
+// TODO: use this for verifying google emails
 func GoogleAuthMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		authHeader := c.Request().Header.Get("Authorization")
