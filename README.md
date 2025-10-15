@@ -14,24 +14,35 @@ This is a core microservice, meant to be used by an application backend or a fro
 
 ## Auth Endpoints
 
-- `[UPDATE 20251007]`: **no longer needs to login to Google**
-
 ### POST `/request-key`
 
-- requires `email` in the request body
+- **Requires Google Authentication.** You must provide a valid Google ID token in the `Authorization: Bearer <ID_TOKEN>` header.
+- The request body now specifies the key's properties.
 
 - `request`:
 ```bash
 curl -X POST https://core.api.dlsu-lscs.org/request-key \
+  -H "Authorization: Bearer <GOOGLE_ID_TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
+  -d '{
+        "project": "My Awesome Project",
+        "allowed_origin": "https://my-awesome-project.com",
+        "is_dev": false,
+        "is_admin": false
+      }'
 ```
+
+- **Request Body Fields:**
+    *   `project` (string, required): A name for your project.
+    *   `allowed_origin` (string, optional): The URL where the key will be used. Required for production keys. Must start with `http://localhost` for dev keys if provided.
+    *   `is_dev` (boolean, optional): Set to `true` for a development key (for `localhost`). Defaults to `false`.
+    *   `is_admin` (boolean, optional): Set to `true` to create an admin key (unrestricted). Defaults to `false`.
 
 - `response`:
 ```json
 { // success
-    "api_key": "somethingsomethingstringssdgasdfkgjdsf",
-    "email": "edwin_sadiarinjr@dlsu.edu.ph"
+    "api_key": "a_very_long_and_secure_api_key_string",
+    "email": "user_from_token@dlsu.edu.ph"
 }
 
 { // fail
