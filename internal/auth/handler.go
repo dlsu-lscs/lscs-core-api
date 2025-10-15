@@ -17,7 +17,8 @@ import (
 )
 
 type RequestKeyRequest struct {
-	Project       string `json:"project" validate:"required"`
+	Email         string `json:"email" validate:"required,email"`
+	Project       string `json:"project"`
 	AllowedOrigin string `json:"allowed_origin"`
 	IsDev         bool   `json:"is_dev"`
 	IsAdmin       bool   `json:"is_admin"`
@@ -98,6 +99,8 @@ func (h *Handler) RequestKeyHandler(c echo.Context) error {
 		isDevForDB = true
 	} else {
 		// Production key
+		// TODO: if "is_dev: true" (have expiry time for API_KEY token)
+		// TODO: only "is_admin: true" API_KEY do not expire
 		if req.AllowedOrigin == "" {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "allowed_origin is required for production keys"})
 		}
@@ -109,7 +112,7 @@ func (h *Handler) RequestKeyHandler(c echo.Context) error {
 			return c.JSON(http.StatusBadRequest, map[string]string{"error": "localhost is not a valid origin for production keys"})
 		}
 
-		exists, err := q.CheckAllowedOriginExists(ctx, req.AllowedOrigin)
+		exists, err := q.CheckAllowedOriginExists(ctx, sql.NullString{String: req.AllowedOrigin, Valid: true})
 		if err != nil {
 			slog.Error("failed to check allowed origin", "error", err)
 			return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Error checking origin"})
@@ -133,11 +136,19 @@ func (h *Handler) RequestKeyHandler(c echo.Context) error {
 	hash := sha256.Sum256([]byte(tokenString))
 	hashStr := hex.EncodeToString(hash[:])
 
+	// Handle nullable project field
+	var projectForDB sql.NullString
+	if req.Project != "" {
+		projectForDB = sql.NullString{String: req.Project, Valid: true}
+	} else {
+		projectForDB = sql.NullString{Valid: false}
+	}
+
 	// Store API key
 	params := repository.StoreAPIKeyParams{
 		MemberEmail:   memberInfo.Email,
 		ApiKeyHash:    hashStr,
-		Project:       req.Project,
+		Project:       projectForDB,
 		AllowedOrigin: allowedOriginForDB,
 		IsDev:         isDevForDB,
 		IsAdmin:       req.IsAdmin,
@@ -157,4 +168,3 @@ func (h *Handler) RequestKeyHandler(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, response)
 }
-

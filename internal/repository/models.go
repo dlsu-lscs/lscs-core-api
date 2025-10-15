@@ -59,7 +59,7 @@ type ApiKey struct {
 	ApiKeyID      int32
 	MemberEmail   string
 	ApiKeyHash    string
-	Project       string
+	Project       sql.NullString
 	AllowedOrigin sql.NullString
 	IsDev         bool
 	IsAdmin       bool

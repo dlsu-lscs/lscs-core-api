@@ -426,7 +426,7 @@ INSERT INTO api_keys (
 type StoreAPIKeyParams struct {
 	MemberEmail   string
 	ApiKeyHash    string
-	Project       string
+	Project       sql.NullString
 	AllowedOrigin sql.NullString
 	IsDev         bool
 	IsAdmin       bool
