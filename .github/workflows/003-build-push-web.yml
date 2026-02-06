@@ -75,4 +75,4 @@ jobs:
         if: always()
         with:
           sarif_file: './web/trivy-web-results.sarif'
-          category: './web/Dockerfile'
+          category: '/web/Dockerfile'
