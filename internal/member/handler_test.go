@@ -52,7 +52,7 @@ func createMemberInfoRow(email, fullName string) *sqlmock.Rows {
 }
 
 // helper to create member info by ID rows with 19 columns matching GetMemberInfoById query (including image_url)
-func createMemberInfoByIdRow(id int, email, fullName string) *sqlmock.Rows {
+func createMemberInfoByIDRow(id int, email, fullName string) *sqlmock.Rows {
 	return sqlmock.NewRows([]string{
 		"id", "email", "full_name", "nickname", "image_url",
 		"committee_id", "committee_name",
@@ -145,7 +145,7 @@ func TestGetMemberInfo(t *testing.T) {
 func TestGetMemberInfoByID(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		e := echo.New()
-		reqBody := IdRequest{Id: 123}
+		reqBody := IDRequest{ID: 123}
 		jsonBody, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/member-id", bytes.NewReader(jsonBody))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -156,8 +156,8 @@ func TestGetMemberInfoByID(t *testing.T) {
 		assert.NoError(t, err)
 		defer db.Close()
 
-		rows := createMemberInfoByIdRow(123, "test@dlsu.edu.ph", "Test User")
-		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs(int32(reqBody.Id)).WillReturnRows(rows)
+		rows := createMemberInfoByIDRow(123, "test@dlsu.edu.ph", "Test User")
+		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs(int32(reqBody.ID)).WillReturnRows(rows)
 
 		dbService := &mockDBService{db: db}
 		h := NewHandler(dbService)
@@ -169,7 +169,7 @@ func TestGetMemberInfoByID(t *testing.T) {
 
 	t.Run("not found", func(t *testing.T) {
 		e := echo.New()
-		reqBody := IdRequest{Id: 123}
+		reqBody := IDRequest{ID: 123}
 		jsonBody, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/member-id", bytes.NewReader(jsonBody))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -180,7 +180,7 @@ func TestGetMemberInfoByID(t *testing.T) {
 		assert.NoError(t, err)
 		defer db.Close()
 
-		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs(int32(reqBody.Id)).WillReturnError(sql.ErrNoRows)
+		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs(int32(reqBody.ID)).WillReturnError(sql.ErrNoRows)
 
 		dbService := &mockDBService{db: db}
 		h := NewHandler(dbService)
@@ -192,7 +192,7 @@ func TestGetMemberInfoByID(t *testing.T) {
 
 	t.Run("validation error - invalid id", func(t *testing.T) {
 		e := echo.New()
-		reqBody := IdRequest{Id: 0} // invalid: must be > 0
+		reqBody := IDRequest{ID: 0} // invalid: must be > 0
 		jsonBody, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/member-id", bytes.NewReader(jsonBody))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -323,7 +323,7 @@ func TestCheckEmailHandler(t *testing.T) {
 func TestCheckIDIfMember(t *testing.T) {
 	t.Run("existing", func(t *testing.T) {
 		e := echo.New()
-		reqBody := IdRequest{Id: 123}
+		reqBody := IDRequest{ID: 123}
 		jsonBody, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/check-id", bytes.NewReader(jsonBody))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -334,7 +334,7 @@ func TestCheckIDIfMember(t *testing.T) {
 		assert.NoError(t, err)
 		defer db.Close()
 
-		mock.ExpectQuery("SELECT id FROM members WHERE id = ?").WithArgs(int32(reqBody.Id)).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(reqBody.Id))
+		mock.ExpectQuery("SELECT id FROM members WHERE id = ?").WithArgs(int32(reqBody.ID)).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(reqBody.ID))
 
 		dbService := &mockDBService{db: db}
 		h := NewHandler(dbService)
@@ -346,7 +346,7 @@ func TestCheckIDIfMember(t *testing.T) {
 
 	t.Run("non-existing", func(t *testing.T) {
 		e := echo.New()
-		reqBody := IdRequest{Id: 123}
+		reqBody := IDRequest{ID: 123}
 		jsonBody, _ := json.Marshal(reqBody)
 		req := httptest.NewRequest(http.MethodPost, "/check-id", bytes.NewReader(jsonBody))
 		req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
@@ -357,7 +357,7 @@ func TestCheckIDIfMember(t *testing.T) {
 		assert.NoError(t, err)
 		defer db.Close()
 
-		mock.ExpectQuery("SELECT id FROM members WHERE id = ?").WithArgs(int32(reqBody.Id)).WillReturnError(sql.ErrNoRows)
+		mock.ExpectQuery("SELECT id FROM members WHERE id = ?").WithArgs(int32(reqBody.ID)).WillReturnError(sql.ErrNoRows)
 
 		dbService := &mockDBService{db: db}
 		h := NewHandler(dbService)

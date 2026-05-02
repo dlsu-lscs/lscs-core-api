@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -48,17 +49,9 @@ func NewS3Service(cfg *appconfig.Config) (*S3Service, error) {
 		UsePathStyle: true, // Garage requires path-style addressing
 	}
 
-	customResolver := aws.EndpointResolverWithOptionsFunc(func(service, region string, options ...interface{}) (aws.Endpoint, error) {
-		return aws.Endpoint{
-			PartitionID:       "aws",
-			URL:               cfg.S3Endpoint,
-			SigningRegion:     cfg.S3Region,
-			HostnameImmutable: true,
-		}, nil
-	})
-
 	awsConfig, err := config.LoadDefaultConfig(context.TODO(),
-		config.WithEndpointResolverWithOptions(customResolver),
+		config.WithRegion(cfg.S3Region),
+		config.WithBaseEndpoint(cfg.S3Endpoint),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(
 			cfg.S3AccessKeyID,
 			cfg.S3SecretAccessKey,
@@ -73,10 +66,16 @@ func NewS3Service(cfg *appconfig.Config) (*S3Service, error) {
 		o.UsePathStyle = s3Config.UsePathStyle
 	})
 
-	return &S3Service{
+	service := &S3Service{
 		client: client,
 		config: s3Config,
-	}, nil
+	}
+
+	if err := service.EnsureBucketCORS(context.Background(), cfg.AllowedOrigins); err != nil {
+		log.Warn().Err(err).Str("bucket", cfg.S3Bucket).Msg("failed to apply bucket CORS")
+	}
+
+	return service, nil
 }
 
 // IsEnabled returns true if S3 service is configured
@@ -181,6 +180,38 @@ func (s *S3Service) ObjectExists(ctx context.Context, objectKey string) (bool, e
 	return true, nil
 }
 
+// EnsureBucketCORS configures bucket CORS to allow browser uploads.
+func (s *S3Service) EnsureBucketCORS(ctx context.Context, allowedOrigins []string) error {
+	if !s.IsEnabled() {
+		return fmt.Errorf("S3 service not enabled")
+	}
+
+	origins := normalizeOrigins(allowedOrigins)
+	if len(origins) == 0 {
+		return nil
+	}
+
+	_, err := s.client.PutBucketCors(ctx, &s3.PutBucketCorsInput{
+		Bucket: aws.String(s.config.Bucket),
+		CORSConfiguration: &types.CORSConfiguration{
+			CORSRules: []types.CORSRule{
+				{
+					AllowedOrigins: origins,
+					AllowedMethods: []string{"GET", "PUT", "POST", "DELETE", "HEAD"},
+					AllowedHeaders: []string{"*"},
+					ExposeHeaders:  []string{"ETag"},
+					MaxAgeSeconds:  aws.Int32(3000),
+				},
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to apply bucket CORS: %w", err)
+	}
+
+	return nil
+}
+
 // GetPublicURL returns the public URL for an object
 func (s *S3Service) GetPublicURL(objectKey string) string {
 	if s.config.Endpoint == "" {
@@ -211,6 +242,35 @@ func isValidImageType(contentType string) bool {
 		"image/webp": true,
 	}
 	return validTypes[contentType]
+}
+
+func normalizeOrigins(origins []string) []string {
+	if len(origins) == 0 {
+		return nil
+	}
+
+	seen := make(map[string]struct{}, len(origins))
+	result := make([]string, 0, len(origins))
+	for _, origin := range origins {
+		trimmed := strings.TrimSpace(origin)
+		if trimmed == "" {
+			continue
+		}
+		trimmed = strings.TrimRight(trimmed, "/")
+		if trimmed == "" {
+			continue
+		}
+		if trimmed == "*" {
+			return []string{"*"}
+		}
+		if _, ok := seen[trimmed]; ok {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		result = append(result, trimmed)
+	}
+
+	return result
 }
 
 // ProfileImageResult contains the result of a profile image upload

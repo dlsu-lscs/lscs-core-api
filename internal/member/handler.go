@@ -62,7 +62,7 @@ func (h *Handler) GetMemberInfo(c echo.Context) error {
 // @Tags members
 // @Accept json
 // @Produce json
-// @Param request body IdRequest true "ID Request"
+// @Param request body IDRequest true "ID Request"
 // @Success 200 {object} FullInfoMemberResponse "Member information"
 // @Failure 400 {object} helpers.ErrorResponse "Invalid request"
 // @Failure 404 {object} helpers.ErrorResponse "Member not found"
@@ -74,20 +74,20 @@ func (h *Handler) GetMemberInfoByID(c echo.Context) error {
 	dbconn := h.dbService.GetConnection()
 	q := repository.New(dbconn)
 
-	req := new(IdRequest)
+	req := new(IDRequest)
 
 	if err := helpers.BindAndValidate(c, req); err != nil {
 		return err
 	}
 
-	memberInfo, err := q.GetMemberInfoById(ctx, int32(req.Id))
+	memberInfo, err := q.GetMemberInfoById(ctx, int32(req.ID))
 	if err != nil {
 		if err == sql.ErrNoRows {
-			log.Error().Err(err).Int("id", req.Id).Msg("id is not an LSCS member")
+			log.Error().Err(err).Int("id", req.ID).Msg("id is not an LSCS member")
 			response := map[string]string{
 				"error": "Not an LSCS member",
 				"state": "absent",
-				"id":    strconv.Itoa(req.Id),
+				"id":    strconv.Itoa(req.ID),
 			}
 			return c.JSON(http.StatusNotFound, response)
 		}
@@ -148,7 +148,7 @@ func parseQueryListParam(values []string) string {
 
 	items := make([]string, 0, len(values))
 	for _, value := range values {
-		for _, part := range strings.Split(value, ",") {
+		for part := range strings.SplitSeq(value, ",") {
 			trimmed := strings.TrimSpace(part)
 			if trimmed == "" {
 				continue
@@ -211,7 +211,7 @@ func (h *Handler) CheckEmailHandler(c echo.Context) error {
 // @Tags members
 // @Accept json
 // @Produce json
-// @Param request body IdRequest true "ID Request"
+// @Param request body IDRequest true "ID Request"
 // @Success 200 {object} map[string]interface{} "Member exists"
 // @Failure 400 {object} helpers.ErrorResponse "Invalid request"
 // @Failure 404 {object} helpers.ErrorResponse "Member not found"
@@ -219,7 +219,7 @@ func (h *Handler) CheckEmailHandler(c echo.Context) error {
 // @Security BearerAuth
 // @Router /check-id [post]
 func (h *Handler) CheckIDIfMember(c echo.Context) error {
-	var req IdRequest
+	var req IDRequest
 
 	if err := helpers.BindAndValidate(c, &req); err != nil {
 		return err
@@ -227,13 +227,13 @@ func (h *Handler) CheckIDIfMember(c echo.Context) error {
 
 	dbconn := h.dbService.GetConnection()
 	q := repository.New(dbconn)
-	id, err := q.CheckIdIfMember(c.Request().Context(), int32(req.Id))
+	id, err := q.CheckIdIfMember(c.Request().Context(), int32(req.ID))
 	if err != nil {
 		if err == sql.ErrNoRows {
 			response := map[string]any{
 				"error": "Not an LSCS member",
 				"state": "absent",
-				"id":    req.Id,
+				"id":    req.ID,
 			}
 			return c.JSON(http.StatusNotFound, response)
 		}

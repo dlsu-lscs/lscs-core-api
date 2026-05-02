@@ -10,9 +10,9 @@ type EmailRequest struct {
 	Email string `json:"email" validate:"required,email" example:"user@dlsu.edu.ph"`
 }
 
-// IdRequest represents a request with a member ID parameter
-type IdRequest struct {
-	Id int `json:"id" validate:"required,gt=0" example:"12345678"`
+// IDRequest represents a request with a member ID parameter
+type IDRequest struct {
+	ID int `json:"id" validate:"required,gt=0" example:"12345678"`
 }
 
 // FullInfoMemberResponse represents complete member information
