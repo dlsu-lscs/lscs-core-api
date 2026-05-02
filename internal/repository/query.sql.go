@@ -781,8 +781,15 @@ SELECT
     h.name as house_name
 FROM members m
 LEFT JOIN houses h ON m.house_id = h.id
+WHERE (? = '' OR FIND_IN_SET(m.position_id, ?))
+  AND (? = '' OR FIND_IN_SET(m.committee_id, ?))
 ORDER BY m.email
 `
+
+type ListMembersParams struct {
+	PositionIds  string
+	CommitteeIds string
+}
 
 type ListMembersRow struct {
 	ID            int32
@@ -802,8 +809,13 @@ type ListMembersRow struct {
 	HouseName     sql.NullString
 }
 
-func (q *Queries) ListMembers(ctx context.Context) ([]ListMembersRow, error) {
-	rows, err := q.db.QueryContext(ctx, listMembers)
+func (q *Queries) ListMembers(ctx context.Context, arg ListMembersParams) ([]ListMembersRow, error) {
+	rows, err := q.db.QueryContext(ctx, listMembers,
+		arg.PositionIds,
+		arg.PositionIds,
+		arg.CommitteeIds,
+		arg.CommitteeIds,
+	)
 	if err != nil {
 		return nil, err
 	}

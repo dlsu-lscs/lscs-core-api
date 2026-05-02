@@ -213,32 +213,63 @@ func TestGetMemberInfoByID(t *testing.T) {
 }
 
 func TestGetAllMembersHandler(t *testing.T) {
-	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/members", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
+	t.Run("no filters", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/members", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
 
-	db, mock, err := sqlmock.New()
-	assert.NoError(t, err)
-	defer db.Close()
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
 
-	rows := sqlmock.NewRows([]string{
-		"id", "full_name", "nickname", "email", "telegram",
-		"position_id", "committee_id", "college", "program",
-		"discord", "interests", "contact_number", "fb_link", "image_url", "house_name",
-	}).AddRow(
-		1, "Test User 1", nil, "test1@dlsu.edu.ph", nil,
-		"MEM", "RND", "CCS", "CS-ST",
-		nil, nil, nil, nil, nil, "Gell-Mann",
-	)
-	mock.ExpectQuery("SELECT (.+) FROM members m").WillReturnRows(rows)
+		rows := sqlmock.NewRows([]string{
+			"id", "full_name", "nickname", "email", "telegram",
+			"position_id", "committee_id", "college", "program",
+			"discord", "interests", "contact_number", "fb_link", "image_url", "house_name",
+		}).AddRow(
+			1, "Test User 1", nil, "test1@dlsu.edu.ph", nil,
+			"MEM", "RND", "CCS", "CS-ST",
+			nil, nil, nil, nil, nil, "Gell-Mann",
+		)
+		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs("", "").WillReturnRows(rows)
 
-	dbService := &mockDBService{db: db}
-	h := NewHandler(dbService)
+		dbService := &mockDBService{db: db}
+		h := NewHandler(dbService)
 
-	if assert.NoError(t, h.GetAllMembersHandler(c)) {
-		assert.Equal(t, http.StatusOK, rec.Code)
-	}
+		if assert.NoError(t, h.GetAllMembersHandler(c)) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+		}
+	})
+
+	t.Run("with filters", func(t *testing.T) {
+		e := echo.New()
+		req := httptest.NewRequest(http.MethodGet, "/members?position=MEM,EXE&committee=RND&committee=HR", nil)
+		rec := httptest.NewRecorder()
+		c := e.NewContext(req, rec)
+
+		db, mock, err := sqlmock.New()
+		assert.NoError(t, err)
+		defer db.Close()
+
+		rows := sqlmock.NewRows([]string{
+			"id", "full_name", "nickname", "email", "telegram",
+			"position_id", "committee_id", "college", "program",
+			"discord", "interests", "contact_number", "fb_link", "image_url", "house_name",
+		}).AddRow(
+			1, "Test User 1", nil, "test1@dlsu.edu.ph", nil,
+			"MEM", "RND", "CCS", "CS-ST",
+			nil, nil, nil, nil, nil, "Gell-Mann",
+		)
+		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs("MEM,EXE", "RND,HR").WillReturnRows(rows)
+
+		dbService := &mockDBService{db: db}
+		h := NewHandler(dbService)
+
+		if assert.NoError(t, h.GetAllMembersHandler(c)) {
+			assert.Equal(t, http.StatusOK, rec.Code)
+		}
+	})
 }
 
 func TestCheckEmailHandler(t *testing.T) {

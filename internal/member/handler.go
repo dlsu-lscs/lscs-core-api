@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -104,6 +105,8 @@ func (h *Handler) GetMemberInfoByID(c echo.Context) error {
 // @Description Get a list of all LSCS members with basic information
 // @Tags members
 // @Produce json
+// @Param position query string false "Filter by position IDs (comma-separated or repeated)"
+// @Param committee query string false "Filter by committee IDs (comma-separated or repeated)"
 // @Success 200 {array} MemberResponse "List of members"
 // @Failure 500 {object} helpers.ErrorResponse "Internal server error"
 // @Security BearerAuth
@@ -113,7 +116,18 @@ func (h *Handler) GetAllMembersHandler(c echo.Context) error {
 	dbconn := h.dbService.GetConnection()
 	queries := repository.New(dbconn)
 
-	members, err := queries.ListMembers(ctx)
+	positionValues := append([]string{}, c.QueryParams()["position"]...)
+	positionValues = append(positionValues, c.QueryParams()["position_id"]...)
+	committeeValues := append([]string{}, c.QueryParams()["committee"]...)
+	committeeValues = append(committeeValues, c.QueryParams()["committee_id"]...)
+
+	positionIDs := parseQueryListParam(positionValues)
+	committeeIDs := parseQueryListParam(committeeValues)
+
+	members, err := queries.ListMembers(ctx, repository.ListMembersParams{
+		PositionIds:  positionIDs,
+		CommitteeIds: committeeIDs,
+	})
 	if err != nil {
 		log.Error().Err(err).Msg("failed to list members")
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to list members"})
@@ -125,6 +139,25 @@ func (h *Handler) GetAllMembersHandler(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, response)
+}
+
+func parseQueryListParam(values []string) string {
+	if len(values) == 0 {
+		return ""
+	}
+
+	items := make([]string, 0, len(values))
+	for _, value := range values {
+		for _, part := range strings.Split(value, ",") {
+			trimmed := strings.TrimSpace(part)
+			if trimmed == "" {
+				continue
+			}
+			items = append(items, trimmed)
+		}
+	}
+
+	return strings.Join(items, ",")
 }
 
 // CheckEmailHandler checks if an email belongs to an LSCS member
@@ -345,7 +378,6 @@ func (h *Handler) UpdateMeHandler(c echo.Context) error {
 		ImageUrl:      imageURL,
 		ID:            memberID,
 	})
-
 	if err != nil {
 		log.Error().Err(err).Int32("member_id", memberID).Msg("error updating member")
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update profile"})
@@ -560,7 +592,6 @@ func (h *Handler) UpdateMemberByIDHandler(c echo.Context) error {
 		ImageUrl:      imageURL,
 		ID:            int32(targetID),
 	})
-
 	if err != nil {
 		log.Error().Err(err).Int32("actor_id", actorID).Int64("target_id", targetID).Msg("error updating member")
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update member"})

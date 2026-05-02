@@ -49,6 +49,8 @@ SELECT
     h.name as house_name
 FROM members m
 LEFT JOIN houses h ON m.house_id = h.id
+WHERE (sqlc.arg(position_ids) = '' OR FIND_IN_SET(m.position_id, sqlc.arg(position_ids)))
+  AND (sqlc.arg(committee_ids) = '' OR FIND_IN_SET(m.committee_id, sqlc.arg(committee_ids)))
 ORDER BY m.email;
 
 -- name: CheckEmailIfMember :one
