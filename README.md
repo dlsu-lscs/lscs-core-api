@@ -7,33 +7,111 @@ This is a core microservice, meant to be used by an application backend or a fro
 ## Usage
 
 > [!IMPORTANT]
-> NOTE: **only RND members can request an API key (associated with their DLSU email)** - to prevent unauthorized access
 >
-> --> All endpoints now requires an API key (in the `Authorization` request headers)
+> - NOTE: **only RND members can request an API key (associated with their DLSU email)** - to prevent unauthorized access
+> - API-key endpoints require `Authorization: Bearer <API-KEY>`
+> - Web UI endpoints require the `session_id` cookie (set after Google OAuth)
+> - Only RND AVP+ can request API keys
+
+HTTP request samples are in `requests.http` (use with VS Code REST Client or JetBrains HTTP client).
+
+## Public Endpoints
+
+### GET `/`
+
+- health check
+- `request`:
+
+```http
+GET {{baseUrl}}/
+```
+
+### GET `/docs/*`
+
+- Swagger UI
+- `request`:
+
+```http
+GET {{baseUrl}}/docs/
+```
 
 ## Auth Endpoints
 
-### POST `/request-key`
+OAuth login/callback are public. Logout and profile endpoints use the `session_id` cookie.
 
-- **Requires Google Authentication.** You must provide a valid Google ID token in the `Authorization: Bearer <ID_TOKEN>` header.
-- The request body now specifies the key's properties.
+### GET `/auth/google/login`
 
+- initiates Google OAuth flow for web UI login
 - `request`:
 
-```bash
-curl -X POST https://core.api.dlsu-lscs.org/request-key \
-  -H "Authorization: Bearer <GOOGLE_ID_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '{
-        "project": "My Awesome Project",
-        "allowed_origin": "https://my-awesome-project.com",
-        "is_dev": false,
-        "is_admin": false
-      }'
+```http
+GET {{baseUrl}}/auth/google/login?remember=true&redirect=/dashboard
+```
+
+### GET `/auth/google/callback`
+
+- OAuth callback endpoint (normally called by Google after login)
+- `request`:
+
+```http
+GET {{baseUrl}}/auth/google/callback?code=<GOOGLE_CODE>&state=true%7C%2Fdashboard
+```
+
+### POST `/auth/logout`
+
+- clears the current session
+- `request`:
+
+```http
+POST {{baseUrl}}/auth/logout
+Cookie: session_id={{sessionId}}
+```
+
+### GET `/auth/me`
+
+- returns the authenticated member profile
+- `request`:
+
+```http
+GET {{baseUrl}}/auth/me
+Cookie: session_id={{sessionId}}
+```
+
+### PUT `/auth/me`
+
+- updates the authenticated member's profile (self-editable fields only)
+- `request`:
+
+```http
+PUT {{baseUrl}}/auth/me
+Content-Type: application/json
+Cookie: session_id={{sessionId}}
+
+{"nickname":"JD","telegram":"@jd","discord":"jd#0001"}
+```
+
+## API Key Management (Web UI - Session Cookie)
+
+### POST `/request-key`
+
+- request an API key (RND AVP+ only)
+- `request`:
+
+```http
+POST {{baseUrl}}/request-key
+Content-Type: application/json
+Cookie: session_id={{sessionId}}
+
+{
+  "project": "My Awesome Project",
+  "allowed_origin": "https://my-awesome-project.com",
+  "is_dev": false,
+  "is_admin": false
+}
 ```
 
 - **Request Body Fields:**
-    - `project` (string, required): A name for your project.
+    - `project` (string, optional): A name for your project.
     - `allowed_origin` (string, optional): The URL where the key will be used. Required for production keys. Must start with `http://localhost` for dev keys if provided.
     - `is_dev` (boolean, optional): Set to `true` for a development key (for `localhost`). Defaults to `false`.
     - `is_admin` (boolean, optional): Set to `true` to create an admin key (unrestricted). Defaults to `false`.
@@ -43,47 +121,50 @@ curl -X POST https://core.api.dlsu-lscs.org/request-key \
 ```json
 { // success
     "api_key": "a_very_long_and_secure_api_key_string",
-    "email": "user_from_token@dlsu.edu.ph"
+    "email": "user_from_token@dlsu.edu.ph",
+    "expires_at": "2027-01-27T15:04:05Z"
 }
 
 { // fail
-  "error": "User is not a member of Research and Development"
+  "error": "User has unauthorized position or committee"
 }
 ```
 
-### POST `/revoke-key`
+### GET `/api-keys`
 
-- for revoking/deleting key
-- requires `email` and `pepper` in the request body
-
+- lists API keys for the authenticated user
 - `request`:
 
-```bash
-curl -X POST https://core.api.dlsu-lscs.org/revoke-key \
-  -H "Content-Type: application/json" \
-  -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph", "pepper": "<CONTACT_ADMIN_DEVELOPER_TO_REVOKE_KEY>"}'
+```http
+GET {{baseUrl}}/api-keys
+Cookie: session_id={{sessionId}}
 ```
 
-- `response`:
+### DELETE `/api-keys/{id}`
 
+- deletes/revokes an API key by ID (must belong to the authenticated user)
+- `request`:
+
+```http
+DELETE {{baseUrl}}/api-keys/123
+Cookie: session_id={{sessionId}}
 ```
-API key for <email> is successfully revoked
-```
 
-## Member Endpoints
+## Member Endpoints (API Key - Bearer JWT)
 
-- all routes: requires `Authorization: Bearer <API-KEY>` in the request headers
+- all routes require `Authorization: Bearer <API-KEY>` in the request headers
 
 ### GET `/members`
 
-- returns all LSCS members from database (_yes_)
-- requires `Authorization: Bearer <API-KEY>` in the request headers
-
+- returns members from database
+- optional query params:
+    - `position`: one or more `position_id` values (comma-separated or repeated)
+    - `committee`: one or more `committee_id` values (comma-separated or repeated)
 - `request`:
 
-```bash
-curl -X GET https://core.api.dlsu-lscs.org/members \
-  -H "Authorization: Bearer <API-KEY>"
+```http
+GET {{baseUrl}}/members?position=MEM,EVP&committee=RND&committee=HRD
+Authorization: Bearer {{apiKey}}
 ```
 
 - `response`:
@@ -93,26 +174,19 @@ curl -X GET https://core.api.dlsu-lscs.org/members \
     {
         "id": 12312312,
         "full_name": "Hehe E. Hihi",
-        "nickname": "Huhi",
+        "nickname": null,
         "email": "hehe_hihi@dlsu.edu.ph",
-        "telegram": "",
+        "telegram": null,
         "position_id": "MEM",
-        "committee_id": "MEM",
+        "committee_id": "RND",
         "college": "CCS",
-        "program": "BS-Org",
-        "discord": ""
-    },
-    {
-        "id": 11111110,
-        "full_name": "Peter Parker",
-        "nickname": "Peter",
-        "email": "peter_parker@dlsu.edu.ph",
-        "telegram": "@something",
-        "position_id": "MEM",
-        "committee_id": "MEM",
-        "college": "CLA",
-        "program": "POM-LGL",
-        "discord": ""
+        "program": "BSCS",
+        "discord": null,
+        "interests": null,
+        "contact_number": null,
+        "fb_link": null,
+        "image_url": null,
+        "house_name": "Gell-Mann"
     }
 ]
 ```
@@ -120,125 +194,115 @@ curl -X GET https://core.api.dlsu-lscs.org/members \
 ### GET `/committees`
 
 - returns all committees
-- requires `Authorization: Bearer <API-KEY>` in the request headers
-
 - `request`:
 
-```bash
-curl -X GET https://core.api.dlsu-lscs.org/committees \
-  -H "Authorization: Bearer <API-KEY>"
+```http
+GET {{baseUrl}}/committees
+Authorization: Bearer {{apiKey}}
 ```
 
 - `response`:
 
 ```json
 {
-    "committees": [...]
+    "committees": [
+        {
+            "committee_id": "RND",
+            "committee_name": "Research and Development",
+            "committee_head": 12312312,
+            "division_id": "INT"
+        }
+    ]
 }
 ```
 
 ### POST `/member`
 
-- returns `email`, `full_name`, `committee_name`, `position_name`, `division_name`, `committee_id`, and `division_id` of the LSCS member
-- requires `Authorization: Bearer <API-KEY>` in the request headers
-- requires `email` in the request body
-
+- returns detailed member info by email
 - `request`:
 
-```bash
-curl -X POST https://core.api.dlsu-lscs.org/member \
-  -H "Authorization: Bearer <API-KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
+```http
+POST {{baseUrl}}/member
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{"email": "edwin_sadiarinjr@dlsu.edu.ph"}
 ```
 
 - `response`:
 
 ```json
-{ // success
-  "committee_id": "RND",
-  "committee_name": "Research and Development",
-  "division_id": "INT",
-  "division_name": "Internals",
-  "email": "edwin_sadiarinjr@dlsu.edu.ph",
-  "full_name": "Edwin Sadiarin Jr.",
-  "position_name": "Committee Trainee"
-}
-
-{ // fail
-  "error": "Email is not an LSCS member"
+{
+    "id": 12323004,
+    "committee_id": "RND",
+    "committee_name": "Research and Development",
+    "division_id": "INT",
+    "division_name": "Internals",
+    "email": "edwin_sadiarinjr@dlsu.edu.ph",
+    "full_name": "Edwin Sadiarin Jr.",
+    "position_id": "MEM",
+    "position_name": "Committee Trainee",
+    "house_name": "Gell-Mann"
 }
 ```
 
 ### POST `/member-id`
 
-- returns `id`, `email`, `full_name`, `committee_name`, `position_name`, `division_name`, `committee_id`, and `division_id` of the LSCS member
-- requires `Authorization: Bearer <API-KEY>` in the request headers
-- requires `id` in the request body
-
+- returns detailed member info by ID
 - `request`:
 
-```bash
-curl -X POST https://core.api.dlsu-lscs.org/member-id \
-  -H "Authorization: Bearer <API-KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"id": 12323004}'
+```http
+POST {{baseUrl}}/member-id
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{"id": 12323004}
 ```
 
 - `response`:
 
 ```json
-{ // success
-  "id": 12323004,
-  "committee_id": "RND",
-  "committee_name": "Research and Development",
-  "division_id": "INT",
-  "division_name": "Internals",
-  "email": "edwin_sadiarinjr@dlsu.edu.ph",
-  "full_name": "Edwin Sadiarin Jr.",
-  "position_name": "Committee Trainee"
-}
-
-{ // fail
-  "error": "ID is not an LSCS member"
+{
+    "id": 12323004,
+    "committee_id": "RND",
+    "committee_name": "Research and Development",
+    "division_id": "INT",
+    "division_name": "Internals",
+    "email": "edwin_sadiarinjr@dlsu.edu.ph",
+    "full_name": "Edwin Sadiarin Jr.",
+    "position_id": "MEM",
+    "position_name": "Committee Trainee",
+    "house_name": "Gell-Mann"
 }
 ```
 
 ### POST `/check-email`
 
 - checks if the email exists in database (indicating if it is an LSCS member or not)
-- requires `Authorization: Bearer <API-KEY>` in the request headers
-- requires `email` in the request body
-
 - `request`:
 
-```bash
-curl -X POST https://core.api.dlsu-lscs.org/check-email \
-  -H "Authorization: Bearer <API-KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"email": "edwin_sadiarinjr@dlsu.edu.ph"}'
+```http
+POST {{baseUrl}}/check-email
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{"email": "edwin_sadiarinjr@dlsu.edu.ph"}
 ```
 
 - `response`:
 
 ```json
-{ // success
-  "email": "edwin_sadiarinjr@dlsu.edu.ph",
-  "state": "present",
-  "success": "Email is an LSCS member"
-}
-
-{ // fail
-  "email": "test@dlsu.edu.ph",
-  "error": "Not an LSCS member",
-  "state": "absent"
+{
+    // success
+    "email": "edwin_sadiarinjr@dlsu.edu.ph",
+    "state": "present",
+    "success": "Email is an LSCS member"
 }
 ```
 
 ### POST `/check-id`
 
 - checks if the provided id exists in database (indicating if it is an LSCS member or not)
-- requires `Authorization: Bearer <API-KEY>` in the request headers
 - requires `id` in the request body
 
 > [!IMPORTANT]
@@ -246,27 +310,86 @@ curl -X POST https://core.api.dlsu-lscs.org/check-email \
 
 - `request`:
 
-```bash
-curl -X POST https://core.api.dlsu-lscs.org/check-id \
-  -H "Authorization: Bearer <API-KEY>" \
-  -H "Content-Type: application/json" \
-  -d '{"id": 12323004}'
+```http
+POST {{baseUrl}}/check-id
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{"id": 12323004}
 ```
 
 - `response`:
 
 ```json
-{ // success
+{
+    // success
     "id": 12323004,
     "state": "present",
     "success": "ID is an LSCS member"
 }
+```
 
-{ // fail
-    "id": 1231434214,
-    "state": "absent"
-    "error": "Not an LSCS member",
-}
+## Member Endpoints (Web UI - Session Cookie)
+
+### GET `/auth/members/{id}`
+
+- returns detailed member info by ID (session-protected)
+- `request`:
+
+```http
+GET {{baseUrl}}/auth/members/12323004
+Cookie: session_id={{sessionId}}
+```
+
+### PUT `/auth/members/{id}`
+
+- updates a member profile (requires authorization to edit the target member)
+- `request`:
+
+```http
+PUT {{baseUrl}}/auth/members/12323004
+Content-Type: application/json
+Cookie: session_id={{sessionId}}
+
+{"full_name":"Updated Name","position_id":"MEM","committee_id":"RND"}
+```
+
+## Upload Endpoints (Web UI - Session Cookie)
+
+### POST `/upload/profile-image`
+
+- generates a pre-signed upload URL
+- `request`:
+
+```http
+POST {{baseUrl}}/upload/profile-image
+Content-Type: application/json
+Cookie: session_id={{sessionId}}
+
+{"content_type":"image/png"}
+```
+
+### POST `/upload/profile-image/complete`
+
+- confirms upload complete and updates `image_url`
+- `request`:
+
+```http
+POST {{baseUrl}}/upload/profile-image/complete
+Content-Type: application/json
+Cookie: session_id={{sessionId}}
+
+{"object_key":"profile-images/12323004/abc.png"}
+```
+
+### DELETE `/upload/profile-image`
+
+- deletes the current profile image
+- `request`:
+
+```http
+DELETE {{baseUrl}}/upload/profile-image
+Cookie: session_id={{sessionId}}
 ```
 
 ## Contributing
@@ -285,13 +408,13 @@ This project uses a monorepo structure with separate CI/CD pipelines for the API
 
 The GitHub Actions workflows handle testing, building, and deployment:
 
-| Workflow | Trigger | Purpose |
-|----------|---------|---------|
-| `001-test.yml` | Push to Go or Web files | Run tests and linting |
-| `002-build-push-api.yml` | Changes to `**/*.go`, `go.mod`, `go.sum`, `Dockerfile.api` | Build & push API Docker image |
-| `003-build-push-web.yml` | Changes to `web/**`, `web/Dockerfile` | Build & push Web Docker image |
-| `004-deploy-api.yml` | After `002-build-push-api.yml` completes | Trigger API deployment in Dokploy |
-| `005-deploy-web.yml` | After `003-build-push-web.yml` completes | Trigger Web deployment in Dokploy |
+| Workflow                 | Trigger                                                    | Purpose                           |
+| ------------------------ | ---------------------------------------------------------- | --------------------------------- |
+| `001-test.yml`           | Push to Go or Web files                                    | Run tests and linting             |
+| `002-build-push-api.yml` | Changes to `**/*.go`, `go.mod`, `go.sum`, `Dockerfile.api` | Build & push API Docker image     |
+| `003-build-push-web.yml` | Changes to `web/**`, `web/Dockerfile`                      | Build & push Web Docker image     |
+| `004-deploy-api.yml`     | After `002-build-push-api.yml` completes                   | Trigger API deployment in Dokploy |
+| `005-deploy-web.yml`     | After `003-build-push-web.yml` completes                   | Trigger Web deployment in Dokploy |
 
 #### Docker Images
 
@@ -301,20 +424,21 @@ The GitHub Actions workflows handle testing, building, and deployment:
 #### Dokploy Setup
 
 1. Create two applications in Dokploy:
-   - **API**: Points to `Dockerfile.api`, port 8080
-   - **Web**: Points to `web/Dockerfile`, port 3000
+    - **API**: Points to `Dockerfile.api`, port 8080
+    - **Web**: Points to `web/Dockerfile`, port 3000
 
 2. Configure environment variables in Dokploy for each application
 
 3. Obtain webhook URLs and tokens from Dokploy, then add to GitHub secrets:
-   - `DOKPLOY_API_WEBHOOK_URL`
-   - `DOKPLOY_API_TOKEN`
-   - `DOKPLOY_WEB_WEBHOOK_URL`
-   - `DOKPLOY_WEB_TOKEN`
+    - `DOKPLOY_API_WEBHOOK_URL`
+    - `DOKPLOY_API_TOKEN`
+    - `DOKPLOY_WEB_WEBHOOK_URL`
+    - `DOKPLOY_WEB_TOKEN`
 
 #### Selective Deployment
 
 Changes are automatically isolated:
+
 - Go code changes → Only rebuilds and deploys API
 - Web code changes → Only rebuilds and deploys Web
 - Configuration changes → Rebuilds and deploys both

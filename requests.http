@@ -1,0 +1,119 @@
+@baseUrl = https://core.api.dlsu-lscs.org
+@apiKey = <API-KEY>
+@sessionId = <SESSION_ID>
+
+### Health check
+GET {{baseUrl}}/
+
+### Swagger UI
+GET {{baseUrl}}/docs/
+
+### OAuth login (web UI)
+GET {{baseUrl}}/auth/google/login?remember=true&redirect=/dashboard
+
+### OAuth callback (example)
+GET {{baseUrl}}/auth/google/callback?code=<GOOGLE_CODE>&state=true%7C%2Fdashboard
+
+### Logout (web UI)
+POST {{baseUrl}}/auth/logout
+Cookie: session_id={{sessionId}}
+
+### Get my profile (web UI)
+GET {{baseUrl}}/auth/me
+Cookie: session_id={{sessionId}}
+
+### Update my profile (web UI)
+PUT {{baseUrl}}/auth/me
+Content-Type: application/json
+Cookie: session_id={{sessionId}}
+
+{
+  "nickname": "JD",
+  "telegram": "@jd",
+  "discord": "jd#0001"
+}
+
+### Request API key (web UI)
+POST {{baseUrl}}/request-key
+Content-Type: application/json
+Cookie: session_id={{sessionId}}
+
+{
+  "project": "My Awesome Project",
+  "allowed_origin": "https://my-awesome-project.com",
+  "is_dev": false,
+  "is_admin": false
+}
+
+### List API keys (web UI)
+GET {{baseUrl}}/api-keys
+Cookie: session_id={{sessionId}}
+
+### Revoke API key (web UI)
+DELETE {{baseUrl}}/api-keys/123
+Cookie: session_id={{sessionId}}
+
+### List members (API key)
+GET {{baseUrl}}/members?position=MEM,EVP&committee=RND&committee=HRD
+Authorization: Bearer {{apiKey}}
+
+### List committees (API key)
+GET {{baseUrl}}/committees
+Authorization: Bearer {{apiKey}}
+
+### Get member by email (API key)
+POST {{baseUrl}}/member
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{"email": "edwin_sadiarinjr@dlsu.edu.ph"}
+
+### Get member by ID (API key)
+POST {{baseUrl}}/member-id
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{"id": 12323004}
+
+### Check email (API key)
+POST {{baseUrl}}/check-email
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{"email": "edwin_sadiarinjr@dlsu.edu.ph"}
+
+### Check ID (API key)
+POST {{baseUrl}}/check-id
+Authorization: Bearer {{apiKey}}
+Content-Type: application/json
+
+{"id": 12323004}
+
+### Get member by ID (web UI)
+GET {{baseUrl}}/auth/members/12323004
+Cookie: session_id={{sessionId}}
+
+### Update member by ID (web UI)
+PUT {{baseUrl}}/auth/members/12323004
+Content-Type: application/json
+Cookie: session_id={{sessionId}}
+
+{"full_name":"Updated Name","position_id":"MEM","committee_id":"RND"}
+
+### Generate upload URL (web UI)
+POST {{baseUrl}}/upload/profile-image
+Content-Type: application/json
+Cookie: session_id={{sessionId}}
+
+{"content_type":"image/png"}
+
+### Complete upload (web UI)
+POST {{baseUrl}}/upload/profile-image/complete
+Content-Type: application/json
+Cookie: session_id={{sessionId}}
+
+{"object_key":"profile-images/12323004/abc.png"}
+
+### Delete profile image (web UI)
+DELETE {{baseUrl}}/upload/profile-image
+Cookie: session_id={{sessionId}}
