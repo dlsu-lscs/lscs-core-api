@@ -232,7 +232,7 @@ func TestGetAllMembersHandler(t *testing.T) {
 			"MEM", "RND", "CCS", "CS-ST",
 			nil, nil, nil, nil, nil, "Gell-Mann",
 		)
-		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs("", "").WillReturnRows(rows)
+		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs("", "", "", "").WillReturnRows(rows)
 
 		dbService := &mockDBService{db: db}
 		h := NewHandler(dbService)
@@ -261,7 +261,7 @@ func TestGetAllMembersHandler(t *testing.T) {
 			"MEM", "RND", "CCS", "CS-ST",
 			nil, nil, nil, nil, nil, "Gell-Mann",
 		)
-		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs("MEM,EXE", "RND,HR").WillReturnRows(rows)
+		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs("MEM,EXE", "MEM,EXE", "RND,HR", "RND,HR").WillReturnRows(rows)
 
 		dbService := &mockDBService{db: db}
 		h := NewHandler(dbService)

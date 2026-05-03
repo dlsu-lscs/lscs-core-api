@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -20,6 +21,7 @@ import (
 // S3Config holds S3/Garage configuration
 type S3Config struct {
 	Endpoint     string
+	PublicURL    string
 	Bucket       string
 	AccessKey    string
 	SecretKey    string
@@ -42,6 +44,7 @@ func NewS3Service(cfg *appconfig.Config) (*S3Service, error) {
 
 	s3Config := S3Config{
 		Endpoint:     cfg.S3Endpoint,
+		PublicURL:    strings.TrimRight(cfg.S3PublicEndpoint, "/"),
 		Bucket:       cfg.S3Bucket,
 		AccessKey:    cfg.S3AccessKeyID,
 		SecretKey:    cfg.S3SecretAccessKey,
@@ -65,6 +68,15 @@ func NewS3Service(cfg *appconfig.Config) (*S3Service, error) {
 	client := s3.NewFromConfig(awsConfig, func(o *s3.Options) {
 		o.UsePathStyle = s3Config.UsePathStyle
 	})
+
+	log.Info().
+		Str("endpoint", cfg.S3Endpoint).
+		Str("public_endpoint", s3Config.PublicURL).
+		Str("bucket", cfg.S3Bucket).
+		Str("region", cfg.S3Region).
+		Bool("path_style", s3Config.UsePathStyle).
+		Strs("allowed_origins", normalizeOrigins(cfg.AllowedOrigins)).
+		Msg("S3 storage configured")
 
 	service := &S3Service{
 		client: client,
@@ -114,6 +126,18 @@ func (s *S3Service) GenerateUploadURL(ctx context.Context, memberID int32, conte
 	if err != nil {
 		log.Error().Err(err).Str("object_key", objectKey).Msg("failed to generate presigned URL")
 		return "", "", fmt.Errorf("failed to generate upload URL: %w", err)
+	}
+
+	if parsedURL, err := url.Parse(presignOutput.URL); err == nil {
+		signedHeaders := parsedURL.Query().Get("X-Amz-SignedHeaders")
+		log.Debug().
+			Str("object_key", objectKey).
+			Str("bucket", s.config.Bucket).
+			Str("content_type", contentType).
+			Str("signed_headers", signedHeaders).
+			Str("host", parsedURL.Host).
+			Str("path", parsedURL.Path).
+			Msg("generated presigned upload URL")
 	}
 
 	return presignOutput.URL, objectKey, nil
@@ -191,14 +215,27 @@ func (s *S3Service) EnsureBucketCORS(ctx context.Context, allowedOrigins []strin
 		return nil
 	}
 
+	allowedMethods := []string{"GET", "PUT", "POST", "DELETE", "HEAD", "OPTIONS"}
+	allowedHeaders := []string{
+		"content-type",
+		"content-md5",
+		"origin",
+		"authorization",
+		"x-amz-acl",
+		"x-amz-content-sha256",
+		"x-amz-date",
+		"x-amz-security-token",
+		"x-amz-user-agent",
+	}
+
 	_, err := s.client.PutBucketCors(ctx, &s3.PutBucketCorsInput{
 		Bucket: aws.String(s.config.Bucket),
 		CORSConfiguration: &types.CORSConfiguration{
 			CORSRules: []types.CORSRule{
 				{
 					AllowedOrigins: origins,
-					AllowedMethods: []string{"GET", "PUT", "POST", "DELETE", "HEAD"},
-					AllowedHeaders: []string{"*"},
+					AllowedMethods: allowedMethods,
+					AllowedHeaders: allowedHeaders,
 					ExposeHeaders:  []string{"ETag"},
 					MaxAgeSeconds:  aws.Int32(3000),
 				},
@@ -209,11 +246,30 @@ func (s *S3Service) EnsureBucketCORS(ctx context.Context, allowedOrigins []strin
 		return fmt.Errorf("failed to apply bucket CORS: %w", err)
 	}
 
+	log.Info().
+		Str("bucket", s.config.Bucket).
+		Strs("allowed_origins", origins).
+		Strs("allowed_methods", allowedMethods).
+		Strs("allowed_headers", allowedHeaders).
+		Msg("applied bucket CORS")
+
+	if corsOutput, err := s.client.GetBucketCors(ctx, &s3.GetBucketCorsInput{Bucket: aws.String(s.config.Bucket)}); err != nil {
+		log.Warn().Err(err).Str("bucket", s.config.Bucket).Msg("failed to fetch bucket CORS")
+	} else if corsOutput != nil {
+		log.Info().
+			Str("bucket", s.config.Bucket).
+			Int("rules", len(corsOutput.CORSRules)).
+			Msg("bucket CORS verified")
+	}
+
 	return nil
 }
 
 // GetPublicURL returns the public URL for an object
 func (s *S3Service) GetPublicURL(objectKey string) string {
+	if s.config.PublicURL != "" {
+		return fmt.Sprintf("%s/%s/%s", s.config.PublicURL, s.config.Bucket, objectKey)
+	}
 	if s.config.Endpoint == "" {
 		return ""
 	}

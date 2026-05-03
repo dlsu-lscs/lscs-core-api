@@ -84,11 +84,21 @@ func (h *UploadHandler) GenerateUploadURLHandler(c echo.Context) error {
 		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Unauthorized"})
 	}
 
+	log.Info().
+		Int32("member_id", memberID).
+		Str("content_type", req.ContentType).
+		Msg("upload URL requested")
+
 	uploadURL, objectKey, err := h.s3Service.GenerateUploadURL(c.Request().Context(), memberID, req.ContentType)
 	if err != nil {
 		log.Error().Err(err).Int32("member_id", memberID).Msg("failed to generate upload URL")
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": err.Error()})
 	}
+
+	log.Info().
+		Int32("member_id", memberID).
+		Str("object_key", objectKey).
+		Msg("upload URL generated")
 
 	return c.JSON(http.StatusOK, GenerateUploadURLResponse{
 		UploadURL: uploadURL,
@@ -127,6 +137,11 @@ func (h *UploadHandler) CompleteUploadHandler(c echo.Context) error {
 		return err
 	}
 
+	log.Info().
+		Int32("member_id", memberID).
+		Str("object_key", req.ObjectKey).
+		Msg("upload completion requested")
+
 	// validate object key format
 	if !isValidObjectKey(req.ObjectKey) {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid object key"})
@@ -139,6 +154,10 @@ func (h *UploadHandler) CompleteUploadHandler(c echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to verify upload"})
 	}
 	if !exists {
+		log.Warn().
+			Int32("member_id", memberID).
+			Str("object_key", req.ObjectKey).
+			Msg("upload object not found")
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Object not found - upload may have failed"})
 	}
 
@@ -157,6 +176,12 @@ func (h *UploadHandler) CompleteUploadHandler(c echo.Context) error {
 		log.Error().Err(err).Int32("member_id", memberID).Str("object_key", req.ObjectKey).Msg("failed to update member image URL")
 		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to update profile"})
 	}
+
+	log.Info().
+		Int32("member_id", memberID).
+		Str("object_key", req.ObjectKey).
+		Str("image_url", publicURL).
+		Msg("upload completed")
 
 	return c.JSON(http.StatusOK, CompleteUploadResponse{
 		ImageURL:    publicURL,
