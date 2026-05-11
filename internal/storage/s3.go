@@ -278,6 +278,32 @@ func (s *S3Service) GetPublicURL(objectKey string) string {
 	return fmt.Sprintf("%s/%s/%s", s.config.Endpoint, s.config.Bucket, objectKey)
 }
 
+// ResolveImageURL extracts the object key from a stored image URL and generates a fresh signed download URL.
+// If the URL cannot be resolved, it returns the original storedURL as fallback.
+func (s *S3Service) ResolveImageURL(ctx context.Context, storedURL string) string {
+	if storedURL == "" {
+		return ""
+	}
+	objectKey := extractObjectKeyFromURL(storedURL)
+	if objectKey == "" {
+		return storedURL
+	}
+	signedURL, err := s.GenerateDownloadURL(ctx, objectKey)
+	if err != nil {
+		log.Warn().Err(err).Str("object_key", objectKey).Msg("failed to generate signed download URL")
+		return storedURL
+	}
+	return signedURL
+}
+
+func extractObjectKeyFromURL(rawURL string) string {
+	idx := strings.Index(rawURL, "profile-images/")
+	if idx >= 0 {
+		return rawURL[idx:]
+	}
+	return ""
+}
+
 // helper functions
 
 func getExtension(contentType string) string {

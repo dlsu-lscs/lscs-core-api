@@ -67,7 +67,7 @@ func NewServer(cfg *config.Config) *http.Server {
 		uploadHandler:    uploadHandler,
 		authHandler:      auth.NewHandler(auth.NewService(cfg.JWTSecret, cfg), dbService, rbacService),
 		oauthHandler:     auth.NewOAuthHandler(cfg, sessionService, dbService),
-		memberHandler:    member.NewHandler(dbService),
+		memberHandler:    member.NewHandler(dbService, s3Service),
 		committeeHandler: committee.NewHandler(dbService),
 	}
 
