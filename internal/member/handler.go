@@ -1,7 +1,6 @@
 package member
 
 import (
-	"context"
 	"database/sql"
 	"net/http"
 	"strconv"
@@ -280,7 +279,6 @@ func (h *Handler) GetMeHandler(c echo.Context) error {
 	}
 
 	response := toFullInfoMemberResponse(repository.GetMemberInfoRow(memberInfo))
-	h.resolveImageURL(ctx, &response)
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -393,7 +391,6 @@ func (h *Handler) UpdateMeHandler(c echo.Context) error {
 	}
 
 	response := toFullInfoMemberResponse(repository.GetMemberInfoRow(updatedMember))
-	h.resolveImageURL(ctx, &response)
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -432,7 +429,6 @@ func (h *Handler) GetMemberByIDHandler(c echo.Context) error {
 	}
 
 	response := toFullInfoMemberResponse(repository.GetMemberInfoRow(memberInfo))
-	h.resolveImageURL(ctx, &response)
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -609,20 +605,6 @@ func (h *Handler) UpdateMemberByIDHandler(c echo.Context) error {
 	}
 
 	response := toFullInfoMemberResponse(repository.GetMemberInfoRow(updatedMember))
-	h.resolveImageURL(ctx, &response)
 
 	return c.JSON(http.StatusOK, response)
-}
-
-func (h *Handler) resolveImageURL(ctx context.Context, response *FullInfoMemberResponse) {
-	if h.s3Service == nil || !h.s3Service.IsEnabled() {
-		return
-	}
-	if !response.ImageURL.Valid || response.ImageURL.String == "" {
-		return
-	}
-	resolved := h.s3Service.ResolveImageURL(ctx, response.ImageURL.String)
-	if resolved != response.ImageURL.String {
-		response.ImageURL = helpers.NullableString{NullString: sql.NullString{String: resolved, Valid: true}}
-	}
 }

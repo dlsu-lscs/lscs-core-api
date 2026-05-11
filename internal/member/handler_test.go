@@ -90,7 +90,7 @@ func TestGetMemberInfo(t *testing.T) {
 		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs(reqBody.Email).WillReturnRows(rows)
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.GetMemberInfo(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -113,7 +113,7 @@ func TestGetMemberInfo(t *testing.T) {
 		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs(reqBody.Email).WillReturnError(sql.ErrNoRows)
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.GetMemberInfo(c)) {
 			assert.Equal(t, http.StatusNotFound, rec.Code)
@@ -134,7 +134,7 @@ func TestGetMemberInfo(t *testing.T) {
 		defer db.Close()
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.GetMemberInfo(c)) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -160,7 +160,7 @@ func TestGetMemberInfoByID(t *testing.T) {
 		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs(int32(reqBody.ID)).WillReturnRows(rows)
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.GetMemberInfoByID(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -183,7 +183,7 @@ func TestGetMemberInfoByID(t *testing.T) {
 		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs(int32(reqBody.ID)).WillReturnError(sql.ErrNoRows)
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.GetMemberInfoByID(c)) {
 			assert.Equal(t, http.StatusNotFound, rec.Code)
@@ -204,7 +204,7 @@ func TestGetMemberInfoByID(t *testing.T) {
 		defer db.Close()
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.GetMemberInfoByID(c)) {
 			assert.Equal(t, http.StatusBadRequest, rec.Code)
@@ -235,7 +235,7 @@ func TestGetAllMembersHandler(t *testing.T) {
 		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs("", "", "", "").WillReturnRows(rows)
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.GetAllMembersHandler(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -264,7 +264,7 @@ func TestGetAllMembersHandler(t *testing.T) {
 		mock.ExpectQuery("SELECT (.+) FROM members m").WithArgs("MEM,EXE", "MEM,EXE", "RND,HR", "RND,HR").WillReturnRows(rows)
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.GetAllMembersHandler(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -289,7 +289,7 @@ func TestCheckEmailHandler(t *testing.T) {
 		mock.ExpectQuery("SELECT email FROM members WHERE email = ?").WithArgs(reqBody.Email).WillReturnRows(sqlmock.NewRows([]string{"email"}).AddRow(reqBody.Email))
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.CheckEmailHandler(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -312,7 +312,7 @@ func TestCheckEmailHandler(t *testing.T) {
 		mock.ExpectQuery("SELECT email FROM members WHERE email = ?").WithArgs(reqBody.Email).WillReturnError(sql.ErrNoRows)
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.CheckEmailHandler(c)) {
 			assert.Equal(t, http.StatusNotFound, rec.Code)
@@ -337,7 +337,7 @@ func TestCheckIDIfMember(t *testing.T) {
 		mock.ExpectQuery("SELECT id FROM members WHERE id = ?").WithArgs(int32(reqBody.ID)).WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(reqBody.ID))
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.CheckIDIfMember(c)) {
 			assert.Equal(t, http.StatusOK, rec.Code)
@@ -360,7 +360,7 @@ func TestCheckIDIfMember(t *testing.T) {
 		mock.ExpectQuery("SELECT id FROM members WHERE id = ?").WithArgs(int32(reqBody.ID)).WillReturnError(sql.ErrNoRows)
 
 		dbService := &mockDBService{db: db}
-		h := NewHandler(dbService, nil)
+		h := NewHandler(dbService)
 
 		if assert.NoError(t, h.CheckIDIfMember(c)) {
 			assert.Equal(t, http.StatusNotFound, rec.Code)
