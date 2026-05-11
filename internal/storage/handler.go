@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"net/http"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rs/zerolog/log"
@@ -227,7 +228,7 @@ func (h *UploadHandler) DeleteImageHandler(c echo.Context) error {
 	}
 
 	// extract object key from URL
-	objectKey := extractObjectKey(member.ImageUrl.String, h.s3Service.GetPublicURL(""))
+	objectKey := extractObjectKey(member.ImageUrl.String)
 	if objectKey == "" {
 		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid image URL"})
 	}
@@ -275,18 +276,13 @@ func isValidObjectKey(key string) bool {
 	return true
 }
 
-func extractObjectKey(url, baseURL string) string {
+func extractObjectKey(url string) string {
 	if url == "" {
 		return ""
 	}
-	// if URL contains the bucket path, extract from there
-	if baseURL != "" {
-		prefix := baseURL + "/"
-		if len(url) > len(prefix) && url[:len(prefix)] == prefix {
-			return url[len(prefix):]
-		}
+	idx := strings.Index(url, "profile-images/")
+	if idx >= 0 {
+		return url[idx:]
 	}
-	// otherwise, try to extract from the URL
-	// expected format: {endpoint}/{bucket}/profile-images/{member_id}/{timestamp}.{ext}
 	return ""
 }

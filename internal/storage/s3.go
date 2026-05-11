@@ -265,10 +265,12 @@ func (s *S3Service) EnsureBucketCORS(ctx context.Context, allowedOrigins []strin
 	return nil
 }
 
-// GetPublicURL returns the public URL for an object
+// GetPublicURL returns the public URL for an object.
+// When a PublicURL (Garage website endpoint) is configured, the bucket name is the hostname
+// and must not appear in the path. With S3 API endpoints, the bucket is part of the path.
 func (s *S3Service) GetPublicURL(objectKey string) string {
 	if s.config.PublicURL != "" {
-		return fmt.Sprintf("%s/%s/%s", s.config.PublicURL, s.config.Bucket, objectKey)
+		return fmt.Sprintf("%s/%s", s.config.PublicURL, objectKey)
 	}
 	if s.config.Endpoint == "" {
 		return ""
