@@ -7,9 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { useQueryClient } from "@tanstack/react-query"
-import { Loader2, Upload, Trash2 } from "lucide-react"
+import { Loader2, Upload, Trash2, AlertCircle } from "lucide-react"
 import { AuthenticatedLayout } from "@/components/authenticated-layout"
 import { ProfileImage } from "@/components/profile-image"
+import { resizeImage, validateImageSize } from "@/lib/image-utils"
 
 export default function ProfilePage() {
   const { user, updateProfile } = useAuth()
@@ -24,6 +25,7 @@ export default function ProfilePage() {
     fb_link: user?.fb_link || "",
   })
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,19 +41,28 @@ export default function ProfilePage() {
     const file = e.target.files?.[0]
     if (!file) return
 
+    const sizeError = validateImageSize(file)
+    if (sizeError) {
+      setUploadError(sizeError)
+      return
+    }
+
     try {
       setUploading(true)
-      const contentType = file.type
+      setUploadError(null)
 
-      // Get pre-signed URL
-      const { upload_url, object_key } = await api.generateUploadUrl(contentType)
+      // Resize to max 512px, JPEG quality 0.8
+      const resized = await resizeImage(file)
+
+      // Get pre-signed URL (always JPEG after resize)
+      const { upload_url, object_key } = await api.generateUploadUrl("image/jpeg")
 
       // Upload to S3
       await fetch(upload_url, {
         method: "PUT",
-        body: file,
+        body: resized,
         headers: {
-          "Content-Type": contentType,
+          "Content-Type": "image/jpeg",
         },
       })
 
@@ -62,10 +73,11 @@ export default function ProfilePage() {
       queryClient.invalidateQueries({ queryKey: ["member", "me"] })
     } catch (error) {
       console.error("Failed to upload image:", error)
+      setUploadError("Upload failed. Please try again.")
     } finally {
       setUploading(false)
     }
-  }
+   }
 
   const handleDeleteImage = async () => {
     try {
@@ -136,6 +148,12 @@ export default function ProfilePage() {
               <p className="text-xs text-muted-foreground">
                 JPG, PNG or WebP. Max 5MB.
               </p>
+              {uploadError && (
+                <p className="text-xs text-destructive flex items-center gap-1 mt-1">
+                  <AlertCircle className="h-3 w-3" />
+                  {uploadError}
+                </p>
+              )}
             </div>
           </div>
         </CardContent>
