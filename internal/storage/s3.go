@@ -21,7 +21,6 @@ import (
 // S3Config holds S3/Garage configuration
 type S3Config struct {
 	Endpoint     string
-	PublicURL    string
 	Bucket       string
 	AccessKey    string
 	SecretKey    string
@@ -44,7 +43,6 @@ func NewS3Service(cfg *appconfig.Config) (*S3Service, error) {
 
 	s3Config := S3Config{
 		Endpoint:     cfg.S3Endpoint,
-		PublicURL:    strings.TrimRight(cfg.S3PublicEndpoint, "/"),
 		Bucket:       cfg.S3Bucket,
 		AccessKey:    cfg.S3AccessKeyID,
 		SecretKey:    cfg.S3SecretAccessKey,
@@ -71,7 +69,6 @@ func NewS3Service(cfg *appconfig.Config) (*S3Service, error) {
 
 	log.Info().
 		Str("endpoint", cfg.S3Endpoint).
-		Str("public_endpoint", s3Config.PublicURL).
 		Str("bucket", cfg.S3Bucket).
 		Str("region", cfg.S3Region).
 		Bool("path_style", s3Config.UsePathStyle).
@@ -265,17 +262,28 @@ func (s *S3Service) EnsureBucketCORS(ctx context.Context, allowedOrigins []strin
 	return nil
 }
 
-// GetPublicURL returns the public URL for an object.
-// When a PublicURL (Garage website endpoint) is configured, the bucket name is the hostname
-// and must not appear in the path. With S3 API endpoints, the bucket is part of the path.
+// GetPublicURL returns the public URL for an object using the S3 API endpoint.
+// This URL requires authentication to access; it is presigned before serving to consumers.
 func (s *S3Service) GetPublicURL(objectKey string) string {
-	if s.config.PublicURL != "" {
-		return fmt.Sprintf("%s/%s", s.config.PublicURL, objectKey)
-	}
 	if s.config.Endpoint == "" {
 		return ""
 	}
 	return fmt.Sprintf("%s/%s/%s", s.config.Endpoint, s.config.Bucket, objectKey)
+}
+
+// PresignImageURL extracts the object key from a stored image URL and generates a
+// presigned GET URL for it. Returns the original URL unchanged if S3 is not enabled,
+// the key cannot be extracted, or presigning fails.
+func (s *S3Service) PresignImageURL(ctx context.Context, imageURL string) (string, error) {
+	if !s.IsEnabled() {
+		return imageURL, nil
+	}
+	idx := strings.Index(imageURL, "profile-images/")
+	if idx < 0 {
+		return imageURL, nil
+	}
+	key := imageURL[idx:]
+	return s.GenerateDownloadURL(ctx, key)
 }
 
 // helper functions

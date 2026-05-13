@@ -47,7 +47,6 @@ type Config struct {
 
 	// S3/Garage Storage
 	S3Endpoint        string
-	S3PublicEndpoint  string
 	S3Bucket          string
 	S3AccessKeyID     string
 	S3SecretAccessKey string
@@ -101,7 +100,6 @@ func Load() (*Config, error) {
 
 		// S3/Garage Storage
 		S3Endpoint:        getEnv("S3_ENDPOINT", ""),
-		S3PublicEndpoint:  getEnv("S3_PUBLIC_ENDPOINT", ""),
 		S3Bucket:          getEnv("S3_BUCKET", "lscs-core"),
 		S3AccessKeyID:     getEnv("S3_ACCESS_KEY", ""),
 		S3SecretAccessKey: getEnv("S3_SECRET_KEY", ""),

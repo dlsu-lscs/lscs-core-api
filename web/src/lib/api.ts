@@ -51,6 +51,11 @@ export const api = {
       body: JSON.stringify({ content_type: contentType })
     }),
 
+  getImageUrl: (objectKey: string) =>
+    fetchAPI<{ url: string; object_key: string; expires_in_seconds: number }>(
+      `/upload/profile-image/url?key=${encodeURIComponent(objectKey)}`
+    ),
+
   completeUpload: (objectKey: string) =>
     fetchAPI<{ image_url: string }>('/upload/profile-image/complete', {
       method: 'POST',

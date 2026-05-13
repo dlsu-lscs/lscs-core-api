@@ -117,3 +117,7 @@ Cookie: session_id={{sessionId}}
 ### Delete profile image (web UI)
 DELETE {{baseUrl}}/upload/profile-image
 Cookie: session_id={{sessionId}}
+
+### Get presigned image URL (web UI)
+GET {{baseUrl}}/upload/profile-image/url?key=profile-images%2F12323004%2Fabc.png
+Cookie: session_id={{sessionId}}

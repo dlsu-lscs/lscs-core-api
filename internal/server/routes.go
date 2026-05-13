@@ -49,6 +49,7 @@ func (s *Server) RegisterRoutes(e *echo.Echo) {
 	// --- Upload routes (Web UI) ---
 	uploadProtected := e.Group("/upload")
 	uploadProtected.Use(middlewares.SessionMiddleware(s.sessionService, s.cfg))
+	uploadProtected.GET("/profile-image/url", s.uploadHandler.GetImageURLHandler)
 	uploadProtected.POST("/profile-image", s.uploadHandler.GenerateUploadURLHandler)
 	uploadProtected.POST("/profile-image/complete", s.uploadHandler.CompleteUploadHandler)
 	uploadProtected.DELETE("/profile-image", s.uploadHandler.DeleteImageHandler)

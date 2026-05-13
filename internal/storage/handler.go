@@ -252,6 +252,53 @@ func (h *UploadHandler) DeleteImageHandler(c echo.Context) error {
 	})
 }
 
+// GetImageURLResponse represents the response for a presigned image URL
+type GetImageURLResponse struct {
+	URL       string `json:"url"`
+	ObjectKey string `json:"object_key"`
+	ExpiresIn int    `json:"expires_in_seconds"`
+}
+
+// GetImageURLHandler returns a presigned URL for displaying a profile image
+// @Summary Get presigned URL for profile image
+// @Description Returns a short-lived URL for displaying a profile image from S3
+// @Tags upload
+// @Produce json
+// @Param key query string true "Object key of the image"
+// @Success 200 {object} GetImageURLResponse "Presigned URL"
+// @Failure 400 {object} helpers.ErrorResponse "Invalid request"
+// @Failure 401 {object} helpers.ErrorResponse "Unauthorized"
+// @Security SessionAuth
+// @Router /upload/profile-image/url [get]
+func (h *UploadHandler) GetImageURLHandler(c echo.Context) error {
+	if !h.s3Service.IsEnabled() {
+		return c.JSON(http.StatusServiceUnavailable, map[string]string{
+			"error": "Storage service not available",
+		})
+	}
+
+	objectKey := c.QueryParam("key")
+	if objectKey == "" {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Missing object key"})
+	}
+
+	if !isValidObjectKey(objectKey) {
+		return c.JSON(http.StatusBadRequest, map[string]string{"error": "Invalid object key"})
+	}
+
+	downloadURL, err := h.s3Service.GenerateDownloadURL(c.Request().Context(), objectKey)
+	if err != nil {
+		log.Error().Err(err).Str("object_key", objectKey).Msg("failed to generate download URL")
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to generate image URL"})
+	}
+
+	return c.JSON(http.StatusOK, GetImageURLResponse{
+		URL:       downloadURL,
+		ObjectKey: objectKey,
+		ExpiresIn: 3600, // 1 hour
+	})
+}
+
 // helper functions
 
 func (h *UploadHandler) updateMemberImageURL(ctx context.Context, memberID int32, imageURL string) error {

@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useQueryClient } from "@tanstack/react-query"
 import { Loader2, Upload, Trash2 } from "lucide-react"
 import { AuthenticatedLayout } from "@/components/authenticated-layout"
+import { ProfileImage } from "@/components/profile-image"
 
 export default function ProfilePage() {
   const { user, updateProfile } = useAuth()
@@ -99,19 +100,7 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-4">
-            {user.image_url ? (
-              <img
-                src={user.image_url}
-                alt={user.full_name}
-                className="h-24 w-24 rounded-full object-cover"
-              />
-            ) : (
-              <div className="h-24 w-24 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-2xl font-bold text-primary">
-                  {user.full_name.charAt(0)}
-                </span>
-              </div>
-            )}
+            <ProfileImage imageUrl={user.image_url} fullName={user.full_name} size="lg" />
             <div className="space-y-2">
               <div className="flex items-center gap-2">
                 <Button

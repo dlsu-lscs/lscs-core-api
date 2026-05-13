@@ -5,7 +5,8 @@ import { usePathname } from "next/navigation"
 import { useAuth } from "@/hooks/use-auth"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { User, Key, LogOut } from "lucide-react"
+import { Key, LogOut } from "lucide-react"
+import { ProfileImage } from "@/components/profile-image"
 
 const baseNavigation = [
   { name: "Dashboard", href: "/dashboard" },
@@ -54,17 +55,7 @@ export default function DashboardLayout({
           <div className="flex items-center gap-4">
             {user && (
               <div className="flex items-center gap-2">
-                {user.image_url ? (
-                  <img
-                    src={user.image_url}
-                    alt={user.full_name}
-                    className="h-8 w-8 rounded-full"
-                  />
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                    <User className="h-4 w-4" />
-                  </div>
-                )}
+                <ProfileImage imageUrl={user.image_url} fullName={user.full_name} size="sm" />
                 <span className="text-sm font-medium">{user.full_name}</span>
               </div>
             )}

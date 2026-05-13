@@ -1,6 +1,7 @@
 package member
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
 	"strconv"
@@ -52,6 +53,7 @@ func (h *Handler) GetMemberInfo(c echo.Context) error {
 	}
 
 	response := toFullInfoMemberResponse(memberInfo)
+	h.presignImageURL(ctx, &response.ImageURL)
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -96,6 +98,7 @@ func (h *Handler) GetMemberInfoByID(c echo.Context) error {
 	}
 
 	response := toFullInfoMemberResponse(repository.GetMemberInfoRow(memberInfo))
+	h.presignImageURL(ctx, &response.ImageURL)
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -135,7 +138,9 @@ func (h *Handler) GetAllMembersHandler(c echo.Context) error {
 
 	response := make([]MemberResponse, 0, len(members))
 	for _, m := range members {
-		response = append(response, toMemberResponse(m))
+		r := toMemberResponse(m)
+		h.presignImageURL(ctx, &r.ImageURL)
+		response = append(response, r)
 	}
 
 	return c.JSON(http.StatusOK, response)
@@ -279,6 +284,7 @@ func (h *Handler) GetMeHandler(c echo.Context) error {
 	}
 
 	response := toFullInfoMemberResponse(repository.GetMemberInfoRow(memberInfo))
+	h.presignImageURL(ctx, &response.ImageURL)
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -391,6 +397,7 @@ func (h *Handler) UpdateMeHandler(c echo.Context) error {
 	}
 
 	response := toFullInfoMemberResponse(repository.GetMemberInfoRow(updatedMember))
+	h.presignImageURL(ctx, &response.ImageURL)
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -429,6 +436,7 @@ func (h *Handler) GetMemberByIDHandler(c echo.Context) error {
 	}
 
 	response := toFullInfoMemberResponse(repository.GetMemberInfoRow(memberInfo))
+	h.presignImageURL(ctx, &response.ImageURL)
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -605,6 +613,22 @@ func (h *Handler) UpdateMemberByIDHandler(c echo.Context) error {
 	}
 
 	response := toFullInfoMemberResponse(repository.GetMemberInfoRow(updatedMember))
+	h.presignImageURL(ctx, &response.ImageURL)
 
 	return c.JSON(http.StatusOK, response)
+}
+
+func (h *Handler) presignImageURL(ctx context.Context, ns *helpers.NullableString) {
+	if h.s3Service == nil || !h.s3Service.IsEnabled() {
+		return
+	}
+	if !ns.Valid || ns.String == "" {
+		return
+	}
+	presigned, err := h.s3Service.PresignImageURL(ctx, ns.String)
+	if err != nil {
+		log.Warn().Err(err).Str("image_url", ns.String).Msg("failed to presign image URL")
+		return
+	}
+	ns.String = presigned
 }
