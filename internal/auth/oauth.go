@@ -109,7 +109,7 @@ func (h *OAuthHandler) GoogleLoginHandler(c echo.Context) error {
 	return c.Redirect(http.StatusFound, authURL)
 }
 
-// GoogleCallbackHandler handles the OAuth callback from Google
+// GoogleCallbackHandler handles the OAuth callback from Google.
 // @Summary Handle Google OAuth Callback
 // @Description Processes Google OAuth callback, creates session, and redirects to frontend
 // @Tags auth

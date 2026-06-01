@@ -50,7 +50,8 @@ func NewS3Service(cfg *appconfig.Config) (*S3Service, error) {
 		UsePathStyle: true, // Garage requires path-style addressing
 	}
 
-	awsConfig, err := config.LoadDefaultConfig(context.TODO(),
+	awsConfig, err := config.LoadDefaultConfig(
+		context.TODO(),
 		config.WithRegion(cfg.S3Region),
 		config.WithBaseEndpoint(cfg.S3Endpoint),
 		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(

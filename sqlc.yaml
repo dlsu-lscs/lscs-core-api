@@ -1,8 +1,8 @@
 version: "2"
 sql:
   - engine: "mysql"
-    queries: ["query.sql"]
-    schema: "schema.sql"
+    queries: ["sqlc/queries/"]
+    schema: "sqlc/schema.sql"
     gen:
       go:
         package: "repository"
